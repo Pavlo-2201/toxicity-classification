@@ -1,0 +1,82 @@
+"""Метрики, выбор порога и парное сравнение моделей — одни и те же для classical и rubert."""
+
+from __future__ import annotations
+
+import numpy as np
+from scipy.stats import binomtest
+from sklearn.metrics import (
+    accuracy_score,
+    average_precision_score,
+    confusion_matrix,
+    f1_score,
+    precision_recall_curve,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+)
+
+
+def classification_metrics(y_true, y_pred, scores=None) -> dict:
+    """scores — любые монотонные оценки токсичности (вероятность или decision_function)."""
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+    result = {
+        "f1_toxic": f1_score(y_true, y_pred, pos_label=1, zero_division=0),
+        "macro_f1": f1_score(y_true, y_pred, average="macro", zero_division=0),
+        "precision_toxic": precision_score(y_true, y_pred, pos_label=1, zero_division=0),
+        "recall_toxic": recall_score(y_true, y_pred, pos_label=1, zero_division=0),
+        "accuracy": accuracy_score(y_true, y_pred),
+        "predicted_toxic_share": float(np.mean(y_pred == 1)),
+    }
+    if scores is not None and len(np.unique(scores)) > 1:
+        result["roc_auc"] = roc_auc_score(y_true, scores)
+        result["average_precision"] = average_precision_score(y_true, scores)
+    result = {k: round(float(v), 4) for k, v in result.items()}
+    result["confusion_matrix"] = {"tn": int(tn), "fp": int(fp), "fn": int(fn), "tp": int(tp)}
+    return result
+
+
+def best_f1_threshold(labels, scores) -> tuple[float, float]:
+    """Порог, максимизирующий F1 токсичного класса на переданных (не тестовых!) оценках. Возвращает (порог, F1)."""
+    precision, recall, thresholds = precision_recall_curve(labels, scores)
+    precision, recall = precision[:-1], recall[:-1]
+    f1 = np.divide(2 * precision * recall, precision + recall, out=np.zeros_like(precision), where=(precision + recall) > 0)
+    best = int(np.argmax(f1))
+    return float(thresholds[best]), float(f1[best])
+
+
+def bootstrap_f1_ci(y_true, y_pred, n_resamples: int = 1000, seed: int = 42, level: float = 0.95) -> dict:
+    """Перцентильный бутстреп-интервал F1 токсичного класса."""
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    rng = np.random.default_rng(seed)
+    n = len(y_true)
+    values = []
+    for _ in range(n_resamples):
+        idx = rng.integers(0, n, n)
+        values.append(f1_score(y_true[idx], y_pred[idx], pos_label=1, zero_division=0))
+    alpha = (1 - level) / 2
+    low, high = np.quantile(values, [alpha, 1 - alpha])
+    return {"level": level, "n_resamples": n_resamples, "seed": seed, "low": round(float(low), 4), "high": round(float(high), 4)}
+
+
+def mcnemar(y, pred_a, pred_b) -> dict:
+    """Точный тест Макнемара: сравнивает число примеров, где ошибается только одна из моделей."""
+    y, pred_a, pred_b = np.asarray(y), np.asarray(pred_a), np.asarray(pred_b)
+    a_right, b_right = pred_a == y, pred_b == y
+    only_a, only_b = int((a_right & ~b_right).sum()), int((~a_right & b_right).sum())
+    p = binomtest(only_a, only_a + only_b, 0.5).pvalue if only_a + only_b else 1.0
+    return {"only_first_correct": only_a, "only_second_correct": only_b, "p_value": round(float(p), 4)}
+
+
+def paired_bootstrap_f1_diff(y, pred_a, pred_b, n: int = 1000, seed: int = 42) -> dict:
+    """Парный бутстреп разности F1 токсичного класса (модель a минус модель b), 95 % интервал."""
+    y, pred_a, pred_b = np.asarray(y), np.asarray(pred_a), np.asarray(pred_b)
+    rng = np.random.default_rng(seed)
+    diffs = []
+    for _ in range(n):
+        idx = rng.integers(0, len(y), len(y))
+        diffs.append(f1_score(y[idx], pred_a[idx], zero_division=0) - f1_score(y[idx], pred_b[idx], zero_division=0))
+    low, high = np.quantile(diffs, [0.025, 0.975])
+    return {"mean": round(float(np.mean(diffs)), 4), "low": round(float(low), 4), "high": round(float(high), 4)}

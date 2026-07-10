@@ -1,0 +1,11 @@
+# данные скачиваются `toxic prepare` (проверяются по SHA-256), в репозитории только манифест разбиений
+data/raw/
+
+# окружения и кеши
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/

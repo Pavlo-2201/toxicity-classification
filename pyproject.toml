@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools==82.0.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "russian-text-classification"
+version = "1.0.0"
+description = "Классификация токсичных русскоязычных комментариев: TF-IDF и RuBERT на общих данных и разбиениях"
+requires-python = ">=3.11"
+# Нижние границы — версии, на которых проверены отчёты; точные версии — requirements/*.txt.
+dependencies = [
+    "numpy>=2.4",
+    "scipy>=1.17",
+    "pandas>=3.0",
+    "scikit-learn>=1.8",
+    "joblib>=1.5",
+    "matplotlib>=3.10",
+]
+
+[project.optional-dependencies]
+# тяжёлые зависимости только для RuBERT; классическая часть и общее ядро работают без них
+rubert = [
+    "torch>=2.8",
+    "transformers>=4.57",
+    "tokenizers>=0.22",
+    "huggingface_hub>=0.36,<1",
+    "safetensors>=0.6",
+    "peft>=0.17",
+    "accelerate>=1.10",
+]
+dev = ["pytest>=9"]
+
+# Три пакета из трёх каталогов: общее ядро и по пакету на модель. Пути к данным, моделям и отчётам
+# считаются от расположения исходников, поэтому установка — только editable (pip install -e .).
+[tool.setuptools]
+packages = ["toxic_core", "toxic_clf"]
+
+[tool.setuptools.package-dir]
+toxic_core = "src/toxic_core"
+toxic_clf = "classical/src/toxic_clf"
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "classical/tests", "rubert/tests"]
+# в двух частях есть тесты с одинаковыми именами файлов
+addopts = ["--import-mode=importlib"]
+# тесты обучения RuBERT пишут чекпойнты (до ~3.6 ГБ за прогон); каталоги прошедших тестов не храним
+tmp_path_retention_policy = "failed"

@@ -1,0 +1,12 @@
+-c constraints.txt
+
+# Классическая модель и общее ядро (toxic_core): без PyTorch.
+# Точные версии, на которых проверены отчёты; установка: pip install -r requirements/classical.txt && pip install --no-deps -e .
+numpy==2.4.1
+scipy==1.17.1
+pandas==3.0.0
+scikit-learn==1.8.0
+joblib==1.5.3
+threadpoolctl==3.6.0
+matplotlib==3.10.8
+pytest==9.0.2

@@ -1,0 +1,19 @@
+data/raw/
+models/
+*.joblib
+*.pkl
+
+# окружения и кеши
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
