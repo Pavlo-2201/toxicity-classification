@@ -46,3 +46,16 @@ def test_linearsvc_pipeline_exposes_decision_scores_not_probabilities():
     scores = toxicity_scores(pipe, TEXTS)
     np.testing.assert_allclose(scores, pipe.decision_function(TEXTS))
     assert ((scores > 0).astype(int) == pipe.predict(TEXTS)).all()
+
+
+def test_word_char_union_and_punctuation_ablation():
+    from toxic_clf.text import strip_punctuation_texts
+
+    pipe = build_pipeline(
+        {"name": "t", "model": "logreg", "word": {"min_df": 1}, "char": {"min_df": 1}, "strip_punctuation": True}
+    )
+    pipe.fit(TEXTS, LABELS)
+    names = pipe.named_steps["features"].get_feature_names_out()
+    assert any(n.startswith("word__") for n in names) and any(n.startswith("char__") for n in names)
+    assert not any("!" in n for n in names)
+    assert strip_punctuation_texts(["Ну, ты!!! :)"]) == ["Ну ты"]
