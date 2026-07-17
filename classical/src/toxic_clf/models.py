@@ -6,6 +6,7 @@ from sklearn.dummy import DummyClassifier
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVC
 from sklearn.preprocessing import FunctionTransformer
 
 from toxic_clf.text import normalize_texts
@@ -35,6 +36,9 @@ def build_classifier(config: dict):
         return DummyClassifier(**{"strategy": "most_frequent", "random_state": SEED, **params})
     if model == "logreg":
         return LogisticRegression(**{"C": 1.0, "max_iter": 2000, "solver": "liblinear", "random_state": SEED, **params})
+    if model == "linearsvc":
+        # LinearSVC даёт только decision_function; это не вероятности
+        return LinearSVC(**{"C": 1.0, "max_iter": 5000, "random_state": SEED, **params})
     raise ValueError(f"Неизвестная модель: {model}")
 
 

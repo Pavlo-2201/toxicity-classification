@@ -35,3 +35,14 @@ def test_vectorizer_is_fitted_on_training_texts_only():
     pipe.predict(["совершенно новое словечко"])
     assert "словечко" not in vocab
     assert set(pipe.named_steps["features"].vocabulary_) == vocab
+
+
+def test_linearsvc_pipeline_exposes_decision_scores_not_probabilities():
+    from toxic_clf.models import toxicity_scores
+
+    pipe = build_pipeline({"name": "t", "model": "linearsvc", "word": {"min_df": 1, "ngram_range": (1, 2)}})
+    pipe.fit(TEXTS, LABELS)
+    assert not hasattr(pipe, "predict_proba")
+    scores = toxicity_scores(pipe, TEXTS)
+    np.testing.assert_allclose(scores, pipe.decision_function(TEXTS))
+    assert ((scores > 0).astype(int) == pipe.predict(TEXTS)).all()
