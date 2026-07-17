@@ -1,0 +1,136 @@
+{
+  "stage": "stage3_baselines",
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8"
+  },
+  "manifest_sha256": "a5c21437095942fde727b0775624660d0d083cd411348594c449305a704b23de",
+  "results": [
+    {
+      "name": "dummy_most_frequent",
+      "config": {
+        "name": "dummy_most_frequent",
+        "model": "dummy",
+        "model_params": {
+          "strategy": "most_frequent"
+        }
+      },
+      "split": "validation",
+      "metrics": {
+        "f1_toxic": 0.0,
+        "macro_f1": 0.4001,
+        "precision_toxic": 0.0,
+        "recall_toxic": 0.0,
+        "accuracy": 0.667,
+        "predicted_toxic_share": 0.0,
+        "confusion_matrix": {
+          "tn": 1412,
+          "fp": 0,
+          "fn": 705,
+          "tp": 0
+        }
+      },
+      "n_features": 18637,
+      "fit_seconds": 0.28
+    },
+    {
+      "name": "dummy_stratified",
+      "config": {
+        "name": "dummy_stratified",
+        "model": "dummy",
+        "model_params": {
+          "strategy": "stratified"
+        }
+      },
+      "split": "validation",
+      "metrics": {
+        "f1_toxic": 0.3374,
+        "macro_f1": 0.5041,
+        "precision_toxic": 0.3386,
+        "recall_toxic": 0.3362,
+        "accuracy": 0.5602,
+        "predicted_toxic_share": 0.3307,
+        "roc_auc": 0.5041,
+        "average_precision": 0.3349,
+        "confusion_matrix": {
+          "tn": 949,
+          "fp": 463,
+          "fn": 468,
+          "tp": 237
+        }
+      },
+      "n_features": 18637,
+      "fit_seconds": 0.28
+    },
+    {
+      "name": "word_1_tfidf_logreg",
+      "config": {
+        "name": "word_1_tfidf_logreg",
+        "model": "logreg",
+        "word": {
+          "ngram_range": [
+            1,
+            1
+          ]
+        }
+      },
+      "split": "validation",
+      "metrics": {
+        "f1_toxic": 0.6997,
+        "macro_f1": 0.7937,
+        "precision_toxic": 0.9016,
+        "recall_toxic": 0.5716,
+        "accuracy": 0.8366,
+        "predicted_toxic_share": 0.2111,
+        "roc_auc": 0.9171,
+        "average_precision": 0.8577,
+        "confusion_matrix": {
+          "tn": 1368,
+          "fp": 44,
+          "fn": 302,
+          "tp": 403
+        }
+      },
+      "n_features": 18637,
+      "fit_seconds": 0.32
+    },
+    {
+      "name": "word_1_tfidf_logreg_cased",
+      "config": {
+        "name": "word_1_tfidf_logreg_cased",
+        "model": "logreg",
+        "word": {
+          "ngram_range": [
+            1,
+            1
+          ],
+          "lowercase": false
+        }
+      },
+      "split": "validation",
+      "metrics": {
+        "f1_toxic": 0.6743,
+        "macro_f1": 0.7779,
+        "precision_toxic": 0.8965,
+        "recall_toxic": 0.5404,
+        "accuracy": 0.8262,
+        "predicted_toxic_share": 0.2008,
+        "roc_auc": 0.9096,
+        "average_precision": 0.8486,
+        "confusion_matrix": {
+          "tn": 1368,
+          "fp": 44,
+          "fn": 324,
+          "tp": 381
+        }
+      },
+      "n_features": 19228,
+      "fit_seconds": 0.33
+    }
+  ]
+}
