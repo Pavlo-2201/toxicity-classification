@@ -59,3 +59,15 @@ def test_word_char_union_and_punctuation_ablation():
     assert any(n.startswith("word__") for n in names) and any(n.startswith("char__") for n in names)
     assert not any("!" in n for n in names)
     assert strip_punctuation_texts(["Ну, ты!!! :)"]) == ["Ну ты"]
+
+
+def test_bootstrap_ci_contains_point_estimate():
+    from toxic_clf.metrics import bootstrap_f1_ci
+
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 2, 500)
+    pred = np.where(rng.random(500) < 0.8, y, 1 - y)
+    ci = bootstrap_f1_ci(y, pred, n_resamples=200)
+    point = classification_metrics(y, pred)["f1_toxic"]
+    assert ci["low"] <= point <= ci["high"]
+    assert ci == bootstrap_f1_ci(y, pred, n_resamples=200)
