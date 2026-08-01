@@ -1,0 +1,67 @@
+{
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8"
+  },
+  "model": "charwb25_linearsvc_C0.3_balanced",
+  "threshold": -0.085671,
+  "split": "validation",
+  "n_fp": 113,
+  "n_fn": 79,
+  "groups": {
+    "short": {
+      "n": 301,
+      "n_toxic": 159,
+      "fp_rate": 0.197,
+      "fn_rate": 0.038,
+      "error_rate": 0.113
+    },
+    "obscene": {
+      "n": 290,
+      "n_toxic": 228,
+      "fp_rate": 0.258,
+      "fn_rate": 0.039,
+      "error_rate": 0.086
+    },
+    "insult_lexicon": {
+      "n": 216,
+      "n_toxic": 200,
+      "fp_rate": 0.562,
+      "fn_rate": 0.055,
+      "error_rate": 0.093
+    },
+    "obfuscation_or_typos": {
+      "n": 334,
+      "n_toxic": 154,
+      "fp_rate": 0.167,
+      "fn_rate": 0.13,
+      "error_rate": 0.15
+    },
+    "no_explicit_markers": {
+      "n": 1694,
+      "n_toxic": 357,
+      "fp_rate": 0.067,
+      "fn_rate": 0.174,
+      "error_rate": 0.09
+    },
+    "all": {
+      "n": 2117,
+      "n_toxic": 705,
+      "fp_rate": 0.08,
+      "fn_rate": 0.112,
+      "error_rate": 0.091
+    }
+  },
+  "group_definitions": {
+    "short": "<= 40 символов",
+    "obscene": "есть корень обсценной лексики",
+    "insult_lexicon": "есть явное оскорбление из списка",
+    "obfuscation_or_typos": "маскировка (*, точки, смесь алфавитов, растянутые буквы) или >= 30% слов вне словаря train",
+    "no_explicit_markers": "нет ни мата, ни явных оскорблений"
+  }
+}

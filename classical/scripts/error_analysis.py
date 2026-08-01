@@ -12,13 +12,17 @@ import pandas as pd
 from toxic_clf import data, splits
 from toxic_clf.errors import categorize
 from toxic_clf.models import build_pipeline
+from toxic_clf.cli import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
+# версии с текстами комментариев: только локально (данные под GPL-2.0, в репозиторий не публикуются)
+LOCAL = REPORTS / "local"
 ANNOTATIONS = data.PROJECT_ROOT / "data" / "error_annotations.csv"
 WORD = re.compile(r"\w+")
 
 
 def main() -> None:
+    use_utf8_stdio()
     best = json.loads((REPORTS / "best_model.json").read_text(encoding="utf-8"))
     config, threshold = best["best_config"], best["threshold"]["used"]
 
@@ -81,7 +85,10 @@ def main() -> None:
 
     cols = [data.ID_COL, "error", data.LABEL_COL, "pred", "score", "oov_share", *cats.columns, data.TEXT_COL]
     errors = val[val.error != ""].sort_values("score", key=abs, ascending=False)[cols]
-    errors.assign(score=errors.score.round(3)).to_csv(REPORTS / "validation_errors.csv", index=False)
+    errors = errors.assign(score=errors.score.round(3))
+    LOCAL.mkdir(parents=True, exist_ok=True)
+    errors.drop(columns=[data.TEXT_COL]).to_csv(REPORTS / "validation_errors.csv", index=False, lineterminator="\n")
+    errors.to_csv(LOCAL / "validation_errors_with_text.csv", index=False, lineterminator="\n")
 
     if ANNOTATIONS.exists():
         notes = pd.read_csv(ANNOTATIONS, keep_default_na=False)
@@ -89,7 +96,9 @@ def main() -> None:
         if examples["error"].isna().any() or (examples["error"] == "").any():
             raise SystemExit("В аннотациях есть строки, которые не являются ошибками модели на validation")
         examples = examples[[data.ID_COL, "error", data.LABEL_COL, "score", "category", "explanation", data.TEXT_COL]]
-        examples.assign(score=examples.score.round(3)).to_csv(REPORTS / "error_examples.csv", index=False)
+        examples = examples.assign(score=examples.score.round(3))
+        examples.drop(columns=[data.TEXT_COL]).to_csv(REPORTS / "error_examples.csv", index=False, lineterminator="\n")
+        examples.to_csv(LOCAL / "error_examples_with_text.csv", index=False, lineterminator="\n")
 
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
