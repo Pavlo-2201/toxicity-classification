@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 
 from toxic_clf import data
+from toxic_clf.cli import use_utf8_stdio
 
 REPORT_PATH = data.PROJECT_ROOT / "reports" / "data_check.json"
 
 
 def main() -> None:
+    use_utf8_stdio()
     df = data.load_dataset()
     report = {
         "dataset": data.ORIGINAL_DATASET,

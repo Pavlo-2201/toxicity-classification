@@ -18,6 +18,7 @@ from toxic_clf.experiments import save_results
 from toxic_clf.metrics import classification_metrics
 from toxic_clf.models import build_pipeline
 from toxic_clf.selection import best_f1_threshold, cross_validate_config, out_of_fold_scores, response_method
+from toxic_clf.cli import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 BEST_CONFIG_PATH = REPORTS / "best_model.json"
@@ -68,6 +69,7 @@ def save_confusion_matrix(metrics: dict, title: str, path) -> None:
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser()
     parser.add_argument("--n-jobs", type=int, default=-1)
     args = parser.parse_args()

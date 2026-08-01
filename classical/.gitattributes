@@ -1,0 +1,5 @@
+# LF на любой ОС и при любом core.autocrlf: от байтов CSV и JSON зависят проверяемые хеши
+# (data/splits/split_manifest.csv, отпечатки в отчётах).
+* text=auto eol=lf
+*.png binary
+*.jpg binary

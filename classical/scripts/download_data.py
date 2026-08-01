@@ -7,6 +7,7 @@ import shutil
 import urllib.request
 
 from toxic_clf import data
+from toxic_clf.cli import use_utf8_stdio
 
 
 def download(url: str, dest, force: bool = False) -> None:
@@ -22,6 +23,7 @@ def download(url: str, dest, force: bool = False) -> None:
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--force", action="store_true", help="скачать заново, даже если файл есть")
     args = parser.parse_args()
@@ -36,7 +38,7 @@ def main() -> None:
     counts = subset[data.LABEL_COL].value_counts().to_dict()
     if len(subset) != data.EXPECTED_ROWS or counts != data.EXPECTED_LABEL_COUNTS:
         raise SystemExit(f"Неожиданный состав блока: {len(subset)} строк, метки {counts}")
-    subset.to_csv(data.DATASET_FILE, index=False)
+    subset.to_csv(data.DATASET_FILE, index=False, lineterminator="\n")
     print(f"Сохранено {len(subset)} строк в {data.DATASET_FILE}")
     fingerprint = data.dataset_fingerprint(subset)
     if fingerprint != data.EXPECTED_FINGERPRINT:

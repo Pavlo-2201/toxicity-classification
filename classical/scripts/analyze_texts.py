@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from toxic_clf import data, splits
+from toxic_clf.cli import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 
@@ -28,6 +29,7 @@ def describe(values) -> dict:
 
 
 def main() -> None:
+    use_utf8_stdio()
     df = data.load_dataset()
     text = df[data.TEXT_COL].str.strip()
     df = df.assign(n_chars=text.str.len(), n_words=text.str.split().str.len())

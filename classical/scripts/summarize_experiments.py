@@ -7,11 +7,13 @@ import json
 import pandas as pd
 
 from toxic_clf import data
+from toxic_clf.cli import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 
 
 def main() -> None:
+    use_utf8_stdio()
     rows = []
     for path in sorted((REPORTS / "experiments").glob("stage*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -38,7 +40,7 @@ def main() -> None:
                      "average_precision": m.get("average_precision"), "n_features": None})
 
     table = pd.DataFrame(rows)
-    table.to_csv(REPORTS / "experiments_summary.csv", index=False)
+    table.to_csv(REPORTS / "experiments_summary.csv", index=False, lineterminator="\n")
     md = ["| этап | конфигурация | оценка на | F1 toxic | ± std | macro-F1 | precision | recall | AP |", "|---|---|---|---|---|---|---|---|---|"]
     fmt = lambda v: "" if v is None or pd.isna(v) else f"{v:.4f}"
     for r in table.itertuples():

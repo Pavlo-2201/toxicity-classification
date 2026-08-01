@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 
 from toxic_clf import data, splits
+from toxic_clf.cli import use_utf8_stdio
 
 
 def main() -> None:
+    use_utf8_stdio()
     df = data.load_dataset()
     fingerprint = data.dataset_fingerprint(df)
     if fingerprint != data.EXPECTED_FINGERPRINT:
