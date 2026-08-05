@@ -33,11 +33,12 @@ dev = ["pytest>=9"]
 # Три пакета из трёх каталогов: общее ядро и по пакету на модель. Пути к данным, моделям и отчётам
 # считаются от расположения исходников, поэтому установка — только editable (pip install -e .).
 [tool.setuptools]
-packages = ["toxic_core", "toxic_clf"]
+packages = ["toxic_core", "toxic_clf", "rubert_clf"]
 
 [tool.setuptools.package-dir]
 toxic_core = "src/toxic_core"
 toxic_clf = "classical/src/toxic_clf"
+rubert_clf = "rubert/src/rubert_clf"
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "classical/tests", "rubert/tests"]

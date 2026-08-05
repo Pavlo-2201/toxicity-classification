@@ -1,0 +1,26 @@
+data/raw/
+models/
+checkpoints/
+artifacts/
+*.pt
+*.bin
+*.safetensors
+*.joblib
+*.npy
+*.npz
+
+# окружения и кеши
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ipynb_checkpoints/
+*.egg-info/
+build/
+.cache/
+
+# IDE
+.idea/
+*.iml
+.vscode/

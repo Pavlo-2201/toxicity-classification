@@ -1,0 +1,12 @@
+# RuBERT поверх классической части. torch ставится отдельно, если нужна сборка под CPU или свою CUDA:
+#   pip install "torch==2.8.0" --index-url https://download.pytorch.org/whl/cpu
+-r classical.txt
+torch==2.8.0
+transformers==4.57.6
+tokenizers==0.22.2
+huggingface_hub==0.36.0
+safetensors==0.6.2
+
+# LoRA для протокола (rubert/scripts/experiments.py, configs/final_lora.json)
+peft==0.17.1
+accelerate==1.10.1
