@@ -9,6 +9,7 @@ from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import FunctionTransformer
 
+from toxic_clf.robustness import Normalizer
 from toxic_clf.text import normalize_texts, strip_punctuation_texts
 
 SEED = 42
@@ -62,7 +63,9 @@ def build_classifier(config: dict):
 
 
 def build_pipeline(config: dict) -> Pipeline:
-    steps = [("normalize", FunctionTransformer(normalize_texts))]
+    # baseline — прежняя минимальная нормализация; варианты включаются явно ("normalization" в конфигурации)
+    variant = config.get("normalization", "baseline")
+    steps = [("normalize", FunctionTransformer(normalize_texts if variant == "baseline" else Normalizer(variant)))]
     if config.get("strip_punctuation"):
         steps.append(("strip_punctuation", FunctionTransformer(strip_punctuation_texts)))
     steps += [("features", build_features(config)), ("clf", build_classifier(config))]
