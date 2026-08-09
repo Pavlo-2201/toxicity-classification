@@ -43,6 +43,17 @@ def save_model(model, metadata: dict, path: Path = MODEL_PATH) -> None:
     path.with_suffix(".json").write_text(json.dumps(meta, ensure_ascii=False, indent=2, default=list) + "\n", encoding="utf-8")
 
 
+def load_calibrator(path: Path = MODEL_PATH):
+    """Калибратор вероятностей из метаданных модели или None, если его нет."""
+    from toxic_clf.calibration import PlattCalibrator
+
+    meta_path = path.with_suffix(".json")
+    if not meta_path.exists():
+        return None
+    calibration = json.loads(meta_path.read_text(encoding="utf-8")).get("calibration")
+    return PlattCalibrator(calibration["slope"], calibration["intercept"]) if calibration else None
+
+
 def load_model(path: Path = MODEL_PATH):
     if not path.exists():
         raise FileNotFoundError(f"{path} не найден. Запустите: python train.py")
