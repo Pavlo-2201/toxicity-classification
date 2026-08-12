@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Line endings are LF in the index (hashes depend on bytes)
+        shell: bash
+        run: |
+          if git ls-files --eol | grep -E "^i/(crlf|mixed)"; then echo "CRLF in index"; exit 1; fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.12"
+          cache: pip
+      - name: Clean install
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install --no-deps -e .
+      - name: Data (pinned commit, SHA-256 and content fingerprint are checked)
+        run: python scripts/download_data.py
+      - name: Tests (incl. UTF-8 CLI in pipe and file, cp1251 locale emulated)
+        run: python -m pytest -q
+      - name: Train and predict through a pipe
+        shell: bash
+        run: |
+          python train.py
+          python predict.py --text "Спасибо, полезно 😀" | tee predictions.csv
+          python -c "import pathlib; t = pathlib.Path('predictions.csv').read_text(encoding='utf-8'); assert '😀' in t"
