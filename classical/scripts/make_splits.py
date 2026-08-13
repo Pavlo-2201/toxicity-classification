@@ -51,7 +51,7 @@ def main() -> None:
         "manifest_file": splits.MANIFEST_PATH.relative_to(data.PROJECT_ROOT).as_posix(),
         "manifest_sha256": data.sha256_file(splits.MANIFEST_PATH),
     }
-    splits.FINGERPRINT_PATH.write_text(json.dumps(info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    splits.FINGERPRINT_PATH.write_text(json.dumps(info, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(counts, ensure_ascii=False, indent=2))
 
 

@@ -140,7 +140,7 @@ def main() -> None:
             report["robustness_test"][f"{FINAL}|{norm}"] = evaluate(pipeline, thresholds[(FINAL, norm)], test_sets, y_test)
         print(json.dumps(report["robustness_test"], ensure_ascii=False, indent=1))
 
-    (REPORTS / "robustness.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (REPORTS / "robustness.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 if __name__ == "__main__":

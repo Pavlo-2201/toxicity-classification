@@ -26,7 +26,7 @@ def main() -> None:
         "checks": data.check_dataset(df),
     }
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    REPORT_PATH.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(report["checks"], ensure_ascii=False, indent=2))
     if not report["checks"]["passed"]:
         raise SystemExit("Проверки не пройдены")

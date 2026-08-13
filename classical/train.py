@@ -1,4 +1,10 @@
-"""Обучение итоговой модели и её сериализация."""
+"""Обучение итоговой модели и её сериализация.
+
+Конфигурация берётся из reports/best_model.json. С --normalization <вариант> обучается
+та же конфигурация с другой нормализацией (docs/robustness.md): порог и калибровка
+подбираются заново на OOF этого варианта, артефакт и отчёты пишутся отдельно и
+baseline не перезаписывают.
+"""
 
 from __future__ import annotations
 
@@ -12,33 +18,48 @@ from pathlib import Path
 
 from toxic_clf import data, splits
 from toxic_clf.calibration import PlattCalibrator, calibration_metrics
-from toxic_clf.final_model import MODEL_PATH, build_final_model, load_selection, save_model, toxicity_scores
+from toxic_clf.final_model import (build_final_model, load_selection, model_path_for, reports_dir_for, save_model,
+                                   toxicity_scores)
 from toxic_clf.metrics import bootstrap_f1_ci, classification_metrics
-from toxic_clf.selection import out_of_fold_scores
+from toxic_clf.robustness import NORMALIZATIONS
+from toxic_clf.selection import choose_threshold, out_of_fold_scores
 from toxic_clf.cli import use_utf8_stdio
-
-FINAL_METRICS_PATH = data.PROJECT_ROOT / "reports" / "final_metrics.json"
-TEST_PREDICTIONS_PATH = data.PROJECT_ROOT / "reports" / "test_predictions.csv"
 
 
 def main() -> None:
     use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--output", type=Path, default=MODEL_PATH)
+    parser.add_argument("--normalization", choices=sorted(NORMALIZATIONS), default="baseline",
+                        help="вариант нормализации; не baseline — отдельный артефакт со своим порогом и калибровкой")
+    parser.add_argument("--output", type=Path, help="артефакт; по умолчанию models/toxic_clf[_<вариант>].joblib")
+    parser.add_argument("--reports-dir", type=Path,
+                        help="куда писать final_metrics.json и test_predictions.csv; по умолчанию reports/ "
+                             "для baseline и reports/normalization_<вариант>/ для варианта")
     args = parser.parse_args()
+    output = args.output or model_path_for(args.normalization)
+    reports_dir = args.reports_dir or reports_dir_for(args.normalization)
 
     selection = load_selection()
-    config, threshold = selection["best_config"], selection["threshold"]["used"]
+    config = dict(selection["best_config"])
+    if args.normalization != "baseline":
+        config.update(name=f"{config['name']}|{args.normalization}", normalization=args.normalization)
     parts = splits.load_splits()
+    x_train, y_train = parts["train"][data.TEXT_COL], parts["train"][data.LABEL_COL]
 
-    model = build_final_model(config, threshold)
-    model.fit(parts["train"][data.TEXT_COL], parts["train"][data.LABEL_COL])
-    # вероятность: Platt-шкалирование на OOF margin train (5-fold); score остаётся сырым margin
-    calibrator = None
-    if config["model"] == "linearsvc":
-        oof = out_of_fold_scores(config, parts["train"][data.TEXT_COL], parts["train"][data.LABEL_COL])
-        calibrator = PlattCalibrator.fit(oof, parts["train"][data.LABEL_COL])
+    # OOF-оценки train (5-fold): по ним выбирается порог и обучается калибровка
+    oof = out_of_fold_scores(config, x_train, y_train)
+    model = build_final_model(config, threshold=0.0).fit(x_train, y_train)
+    val = parts["validation"]
+    threshold_info = choose_threshold(config, oof, y_train, toxicity_scores(model, val[data.TEXT_COL]), val[data.LABEL_COL])
+    threshold = threshold_info["used"]
+    if args.normalization == "baseline" and threshold != selection["threshold"]["used"]:
+        raise SystemExit(f"Порог {threshold} не совпал с reports/best_model.json ({selection['threshold']['used']}): "
+                         "выбор модели не воспроизводится")
+    model.set_params(threshold=threshold)
+    # вероятность: Platt-шкалирование на OOF margin train; score остаётся сырым margin
+    calibrator = PlattCalibrator.fit(oof, y_train) if config["model"] == "linearsvc" else None
 
+    reports_dir.mkdir(parents=True, exist_ok=True)
     metrics = {}
     for name in ("validation", "test"):
         part = parts[name]
@@ -55,14 +76,16 @@ def main() -> None:
             # score — сырой margin LinearSVC (не вероятность), probability — OOF Platt
             part[[data.ID_COL, data.LABEL_COL]].assign(score=scores.round(6), pred=pred,
                                                        probability=np.round(probs, 6)).to_csv(
-                TEST_PREDICTIONS_PATH, index=False, lineterminator="\n"
+                reports_dir / "test_predictions.csv", index=False, lineterminator="\n"
             )
         print(f"{name}: " + json.dumps({k: v for k, v in metrics[name].items()}, ensure_ascii=False))
 
     metadata = {
         "environment": capture(),
         "config": config,
+        "normalization": args.normalization,
         "threshold": threshold,
+        "threshold_selection": threshold_info,
         "score_type": "decision_function (не вероятность)" if config["model"] == "linearsvc" else "вероятность",
         "calibration": {"method": "Platt на OOF margin train (5-fold)", **calibrator.to_dict()} if calibrator else None,
         "trained_on": "train",
@@ -71,12 +94,13 @@ def main() -> None:
         "content_fingerprint": data.EXPECTED_FINGERPRINT,
         "metrics": metrics,
     }
-    save_model(model, metadata, args.output)
-    FINAL_METRICS_PATH.write_text(
-        json.dumps({"environment": capture(), "model": config["name"], "threshold": threshold, **metrics}, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
+    save_model(model, metadata, output)
+    (reports_dir / "final_metrics.json").write_text(
+        json.dumps({"environment": capture(), "model": config["name"], "normalization": args.normalization, "threshold": threshold,
+                    "threshold_selection": threshold_info, **metrics}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8", newline="\n",
     )
-    print(f"Модель сохранена: {args.output}")
+    print(f"Модель сохранена: {output}; отчёты: {reports_dir}")
 
 
 if __name__ == "__main__":

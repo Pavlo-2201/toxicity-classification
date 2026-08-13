@@ -1,0 +1,66 @@
+{
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8"
+  },
+  "dataset": {
+    "name": "Toxic Russian Comments (ok.ru)",
+    "original": "https://www.kaggle.com/datasets/alexandersemiletov/toxic-russian-comments",
+    "mirror_repo": "AlexSham/Toxic_Russian_Comments",
+    "revision": "a72ec0ab553d92d14a48bef0c0f4927c950bcf4c",
+    "file": "test.jsonl",
+    "sha256": "5ea5d3382e19377af885f87f56c614536016ec9f0f70b2394b30e4062e4eb95a",
+    "rows": 24829
+  },
+  "overlap_check": {
+    "rows": 24829,
+    "overlap_with_our_corpus": 5,
+    "empty_after_normalization": 0,
+    "conflicting_label_rows": 0,
+    "duplicate_rows_dropped": 152,
+    "rows_kept": 24672,
+    "toxic_share_kept": 0.1801
+  },
+  "model": "models/toxic_clf_all.joblib",
+  "metrics_at_model_threshold": {
+    "f1_toxic": 0.4799,
+    "macro_f1": 0.5979,
+    "precision_toxic": 0.322,
+    "recall_toxic": 0.9413,
+    "accuracy": 0.6325,
+    "predicted_toxic_share": 0.5264,
+    "roc_auc": 0.8957,
+    "average_precision": 0.7121,
+    "confusion_matrix": {
+      "tn": 11424,
+      "fp": 8805,
+      "fn": 261,
+      "tp": 4182
+    },
+    "f1_toxic_bootstrap_ci": {
+      "level": 0.95,
+      "n_resamples": 1000,
+      "seed": 42,
+      "low": 0.4709,
+      "high": 0.4883
+    },
+    "calibration_oof_platt": {
+      "brier": 0.1989,
+      "log_loss": 0.6414,
+      "ece_10_bins": 0.2658
+    },
+    "mean_probability": 0.4459
+  },
+  "roc_auc": 0.8957,
+  "average_precision": 0.7121,
+  "oracle_threshold_on_okru": {
+    "threshold": 0.4385,
+    "f1_toxic": 0.6545,
+    "note": "подобран на самих данных ok.ru: верхняя граница, не результат"
+  }
+}

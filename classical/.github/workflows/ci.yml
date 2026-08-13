@@ -35,3 +35,15 @@ jobs:
           python train.py
           python predict.py --text "Спасибо, полезно 😀" | tee predictions.csv
           python -c "import pathlib; t = pathlib.Path('predictions.csv').read_text(encoding='utf-8'); assert '😀' in t"
+      - name: Normalization "all" as a separate artifact, user-given paths
+        shell: bash
+        run: |
+          python train.py --normalization all --output "$RUNNER_TEMP/m/all.joblib" --reports-dir "$RUNNER_TEMP/r/all"
+          python predict.py --model "$RUNNER_TEMP/m/all.joblib" --text "ты тупoй идиoт" --output "$RUNNER_TEMP/all_pred.csv"
+          python scripts/external_eval.py --model "$RUNNER_TEMP/m/all.joblib" --reports-dir "$RUNNER_TEMP/r/all" > /dev/null
+          test -s "$RUNNER_TEMP/r/all/external_okru.json"
+      - name: Retraining reproduces committed reports byte for byte
+        shell: bash
+        run: |
+          python train.py --normalization all
+          git diff --exit-code -- reports/final_metrics.json reports/test_predictions.csv reports/normalization_all/final_metrics.json reports/normalization_all/test_predictions.csv

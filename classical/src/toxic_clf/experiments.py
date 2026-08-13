@@ -58,5 +58,5 @@ def save_results(stage: str, results: list[dict], path: Path | None = None) -> P
         "manifest_sha256": data.sha256_file(splits.MANIFEST_PATH),
         "results": results,
     }
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=list) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, default=list) + "\n", encoding="utf-8", newline="\n")
     return path

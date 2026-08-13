@@ -1,0 +1,80 @@
+{
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8"
+  },
+  "model": "charwb25_linearsvc_C0.3_balanced",
+  "normalization": "baseline",
+  "threshold": -0.085671,
+  "threshold_selection": {
+    "default": 0.0,
+    "oof_tuned": -0.085671,
+    "oof_f1_toxic": 0.8722,
+    "used": -0.085671,
+    "rule": "подобранный порог принимается, если F1 на validation не ниже, чем со стандартным"
+  },
+  "validation": {
+    "f1_toxic": 0.867,
+    "macro_f1": 0.8991,
+    "precision_toxic": 0.8471,
+    "recall_toxic": 0.8879,
+    "accuracy": 0.9093,
+    "predicted_toxic_share": 0.3491,
+    "roc_auc": 0.9648,
+    "average_precision": 0.931,
+    "confusion_matrix": {
+      "tn": 1299,
+      "fp": 113,
+      "fn": 79,
+      "tp": 626
+    },
+    "calibration_oof_platt": {
+      "brier": 0.0665,
+      "log_loss": 0.2286,
+      "ece_10_bins": 0.0204
+    },
+    "calibration_raw_sigmoid": {
+      "brier": 0.134,
+      "log_loss": 0.4467,
+      "ece_10_bins": 0.2495
+    }
+  },
+  "test": {
+    "f1_toxic": 0.8542,
+    "macro_f1": 0.8892,
+    "precision_toxic": 0.8329,
+    "recall_toxic": 0.8766,
+    "accuracy": 0.9003,
+    "predicted_toxic_share": 0.3505,
+    "roc_auc": 0.9611,
+    "average_precision": 0.9268,
+    "confusion_matrix": {
+      "tn": 1288,
+      "fp": 124,
+      "fn": 87,
+      "tp": 618
+    },
+    "calibration_oof_platt": {
+      "brier": 0.0699,
+      "log_loss": 0.2386,
+      "ece_10_bins": 0.0179
+    },
+    "calibration_raw_sigmoid": {
+      "brier": 0.1362,
+      "log_loss": 0.4511,
+      "ece_10_bins": 0.2465
+    },
+    "f1_toxic_bootstrap_ci": {
+      "level": 0.95,
+      "n_resamples": 1000,
+      "seed": 42,
+      "low": 0.8337,
+      "high": 0.873
+    }
+  }
+}

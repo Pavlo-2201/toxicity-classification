@@ -46,7 +46,7 @@ def main() -> None:
     for r in table.itertuples():
         md.append(f"| {r.stage} | {r.name} | {r.evaluated_on} | {fmt(r.f1_toxic)} | {fmt(r.f1_toxic_std)} | {fmt(r.macro_f1)} | "
                   f"{fmt(r.precision_toxic)} | {fmt(r.recall_toxic)} | {fmt(r.average_precision)} |")
-    (REPORTS / "experiments_summary.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    (REPORTS / "experiments_summary.md").write_text("\n".join(md) + "\n", encoding="utf-8", newline="\n")
     print(f"{len(table)} строк -> reports/experiments_summary.csv, reports/experiments_summary.md")
 
 

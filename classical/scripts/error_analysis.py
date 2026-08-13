@@ -81,7 +81,7 @@ def main() -> None:
             "no_explicit_markers": "нет ни мата, ни явных оскорблений",
         },
     }
-    (REPORTS / "error_analysis.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (REPORTS / "error_analysis.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     cols = [data.ID_COL, "error", data.LABEL_COL, "pred", "score", "oov_share", *cats.columns, data.TEXT_COL]
     errors = val[val.error != ""].sort_values("score", key=abs, ascending=False)[cols]

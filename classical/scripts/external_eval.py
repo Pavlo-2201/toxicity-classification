@@ -12,6 +12,7 @@ from toxic_clf.environment import capture
 
 import argparse
 import json
+from pathlib import Path
 
 import numpy as np
 from sklearn.metrics import average_precision_score, roc_auc_score
@@ -20,17 +21,30 @@ from toxic_clf import data
 from toxic_clf.calibration import calibration_metrics
 from toxic_clf.cli import use_utf8_stdio
 from toxic_clf.external import OKRU, clean_external, download_okru, load_okru
-from toxic_clf.final_model import MODEL_PATH, load_calibrator, load_model, toxicity_scores
+from toxic_clf.final_model import (MODEL_PATH, load_calibrator, load_metadata, load_model, reports_dir_for,
+                                   toxicity_scores)
 from toxic_clf.metrics import bootstrap_f1_ci, classification_metrics
 
-REPORTS = data.PROJECT_ROOT / "reports"
+
+def display_path(path: Path) -> str:
+    """Путь внутри проекта — относительный (отчёт не зависит от машины), снаружи — как есть."""
+    path = Path(path).resolve()
+    try:
+        return path.relative_to(data.PROJECT_ROOT).as_posix()
+    except ValueError:
+        return str(path)
 
 
 def main() -> None:
     use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--model", default=MODEL_PATH)
+    parser.add_argument("--model", type=Path, default=MODEL_PATH)
+    parser.add_argument("--reports-dir", type=Path,
+                        help="куда писать отчёты; по умолчанию reports/ для baseline и reports/normalization_<вариант>/ "
+                             "для модели с другой нормализацией (берётся из метаданных модели)")
     args = parser.parse_args()
+    reports = args.reports_dir or reports_dir_for(load_metadata(args.model).get("normalization", "baseline"))
+    reports.mkdir(parents=True, exist_ok=True)
 
     download_okru()
     okru, overlap = clean_external(load_okru(), data.load_dataset())
@@ -51,16 +65,17 @@ def main() -> None:
     report = {
         "environment": capture(),
         "dataset": OKRU, "overlap_check": overlap,
-        "model": str(args.model), "metrics_at_model_threshold": metrics,
+        "model": display_path(args.model), "metrics_at_model_threshold": metrics,
         "roc_auc": round(float(roc_auc_score(y, scores)), 4),
         "average_precision": round(float(average_precision_score(y, scores)), 4),
         "oracle_threshold_on_okru": {"threshold": round(best[0], 4), "f1_toxic": round(best[1], 4),
                                      "note": "подобран на самих данных ok.ru: верхняя граница, не результат"},
     }
-    (REPORTS / "external_okru.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (reports / "external_okru.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+                                                encoding="utf-8", newline="\n")
     okru[["okru_row", "label"]].assign(score=np.round(scores, 6), pred=pred,
                                        **({"probability": np.round(probs, 6)} if probs is not None else {})).to_csv(
-        REPORTS / "external_okru_predictions.csv", index=False, lineterminator="\n")
+        reports / "external_okru_predictions.csv", index=False, lineterminator="\n")
     print(json.dumps(report, ensure_ascii=False, indent=1))
 
 

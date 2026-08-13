@@ -121,7 +121,7 @@ def main() -> None:
         "manifest_sha256": data.sha256_file(splits.MANIFEST_PATH),
         "content_fingerprint": data.EXPECTED_FINGERPRINT,
     }
-    BEST_CONFIG_PATH.write_text(json.dumps(selection, ensure_ascii=False, indent=2, default=list) + "\n", encoding="utf-8")
+    BEST_CONFIG_PATH.write_text(json.dumps(selection, ensure_ascii=False, indent=2, default=list) + "\n", encoding="utf-8", newline="\n")
     save_results("stage6_cv_selection", cv_results)
 
     save_confusion_matrix(selection["validation"]["used_threshold"], "Validation", REPORTS / "figures" / "confusion_validation.png")

@@ -55,7 +55,7 @@ def main() -> None:
     }
 
     report = {"environment": capture(), "lengths_by_label": lengths, "short_texts_by_label": short, "duplicates": duplicates}
-    (REPORTS / "text_analysis.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (REPORTS / "text_analysis.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
