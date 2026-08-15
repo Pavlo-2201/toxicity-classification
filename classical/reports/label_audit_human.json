@@ -1,0 +1,49 @@
+{
+  "method": "120 текстов из data/label_audit.csv, разметка человеком вслепую: без метки датасета, вердикта LLM и номера строки, порядок перемешан (seed 2026). Определение: токсичный — оскорбление, угроза, непристойность или ненависть к группе",
+  "human_vs_dataset": {
+    "label_0": {
+      "n": 60,
+      "disagree": 3,
+      "unclear": 13,
+      "disagree_share": 0.05,
+      "wilson_95": [
+        0.017,
+        0.137
+      ]
+    },
+    "label_1": {
+      "n": 60,
+      "disagree": 6,
+      "unclear": 9,
+      "disagree_share": 0.1,
+      "wilson_95": [
+        0.047,
+        0.201
+      ]
+    }
+  },
+  "human_vs_llm": {
+    "both_decisive": 96,
+    "agreement": 0.979,
+    "cohen_kappa": 0.958,
+    "confusion": {
+      "human_0_llm_0": 50,
+      "human_0_llm_1": 0,
+      "human_1_llm_0": 2,
+      "human_1_llm_1": 44
+    },
+    "unclear": {
+      "human": 22,
+      "llm": 4
+    }
+  },
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8"
+  }
+}
