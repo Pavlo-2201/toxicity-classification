@@ -7,6 +7,7 @@ import shutil
 import urllib.request
 
 from rubert_clf import data
+from rubert_clf.cli import use_utf8_stdio
 
 
 def download(url: str, dest, force: bool = False) -> None:
@@ -22,6 +23,7 @@ def download(url: str, dest, force: bool = False) -> None:
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--force", action="store_true", help="скачать заново, даже если файл есть")
     args = parser.parse_args()
@@ -39,7 +41,7 @@ def main() -> None:
     fingerprint = data.dataset_fingerprint(subset)
     if fingerprint != data.EXPECTED_FINGERPRINT:
         raise SystemExit(f"Отпечаток содержимого не совпал: {fingerprint}")
-    subset.to_csv(data.DATASET_FILE, index=False)
+    subset.to_csv(data.DATASET_FILE, index=False, lineterminator="\n")
     print(f"Отпечаток содержимого совпадает: {fingerprint}")
     print(f"Сохранено {len(subset)} строк в {data.DATASET_FILE}")
 

@@ -13,11 +13,13 @@ from rubert_clf import data, model_source, splits
 from rubert_clf.dataset import ToxicCommentsDataset
 from rubert_clf.finetune import FinetuneConfig, build_model, fit, write_json
 from rubert_clf.runtime import get_device, set_seed
+from rubert_clf.cli import use_utf8_stdio
 
 SMOKE_SIZE = 256
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--smoke", action="store_true", help=f"{SMOKE_SIZE} текстов train и validation, 1 эпоха")
     parser.add_argument("--run-name", default=None, help="имя прогона (папка чекпойнтов)")

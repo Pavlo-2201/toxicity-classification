@@ -12,6 +12,7 @@ from transformers import AutoModel, AutoTokenizer
 from rubert_clf import data, model_source, splits
 from rubert_clf.dataset import PaddingCollator, ToxicCommentsDataset, make_dataloader
 from rubert_clf.text import normalize_texts
+from rubert_clf.cli import use_utf8_stdio
 
 REPORT = data.PROJECT_ROOT / "reports" / "tokenization.json"
 CANDIDATE_MAX_LENGTHS = (32, 64, 128, 256, 512)
@@ -27,6 +28,7 @@ def length_stats(lengths) -> dict:
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--max-length", type=int, default=128)
     parser.add_argument("--batch-size", type=int, default=32)

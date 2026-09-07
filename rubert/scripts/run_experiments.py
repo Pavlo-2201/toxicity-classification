@@ -16,6 +16,7 @@ from rubert_clf.dataset import ToxicCommentsDataset
 from rubert_clf.finetune import FinetuneConfig, build_model, fit, write_json
 from rubert_clf.metrics import classification_metrics
 from rubert_clf.runtime import get_device, set_seed
+from rubert_clf.cli import use_utf8_stdio
 
 GRID_PATH = data.PROJECT_ROOT / "configs" / "stage6_experiments.json"
 BEST_CONFIG_PATH = data.PROJECT_ROOT / "configs" / "finetune_best.json"
@@ -62,6 +63,7 @@ def run_one(config, parts, tokenizer, device, out_dir, ckpt_root, keep_last: boo
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--keep-last", action="store_true", help="не удалять last.pt после прогона")
@@ -127,8 +129,8 @@ def main() -> None:
         "runs": rows,
     }
     write_json(out_dir / "summary.json", summary)
-    table.to_csv(out_dir / "summary.csv", index=False)
-    predictions.to_csv(out_dir / "val_predictions.csv", index=False)
+    table.to_csv(out_dir / "summary.csv", index=False, lineterminator="\n")
+    predictions.to_csv(out_dir / "val_predictions.csv", index=False, lineterminator="\n")
     print(table.to_string(index=False))
     if not args.smoke:
         write_json(BEST_CONFIG_PATH, {**chosen["config"], "epochs": chosen["config"]["epochs"],

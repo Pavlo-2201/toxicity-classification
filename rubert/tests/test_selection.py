@@ -33,7 +33,7 @@ def test_best_checkpoint_is_saved_and_reloads(tokenizer, tmp_path):
     ds = ToxicCommentsDataset(TEXTS, LABELS, tokenizer, max_length=16)
     config = FinetuneConfig(epochs=3, batch_size=4, lr=1e-4, class_weight="balanced")
     history = fit(model, ds, ds, tokenizer, config, CPU, checkpoint_dir=tmp_path, log=lambda *_: None)
-    selection = json.loads((tmp_path / "best" / "selection.json").read_text())
+    selection = json.loads((tmp_path / "best" / "selection.json").read_text(encoding="utf-8"))
     tuned = [h["validation_tuned"]["f1_toxic"] for h in history]
     assert selection["epoch"] == history[int(np.argmax(tuned))]["epoch"]  # первая эпоха с максимумом
     assert selection["config"]["class_weight"] == "balanced"

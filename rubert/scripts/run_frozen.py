@@ -21,6 +21,7 @@ from rubert_clf.embeddings import POOLINGS, extract_embeddings
 from rubert_clf.metrics import best_f1_threshold, classification_metrics
 from rubert_clf.runtime import get_device, set_seed
 from rubert_clf.tfidf_baseline import build_classical_baseline
+from rubert_clf.cli import use_utf8_stdio
 
 SEED = 42
 CACHE_DIR = data.PROJECT_ROOT / "artifacts" / "embeddings"
@@ -56,6 +57,7 @@ def get_embeddings(parts, tokenizer, encoder, device, max_length: int) -> tuple[
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--max-lengths", type=int, nargs="+", default=[128, 512])
     parser.add_argument("--device", default="auto")
@@ -114,7 +116,7 @@ def main() -> None:
     tfidf_fit_seconds = time.perf_counter() - start
     tfidf_scores = baseline.decision_function(parts["validation"][data.TEXT_COL])
     tfidf_val = classification_metrics(y_val, baseline.predict(parts["validation"][data.TEXT_COL]), tfidf_scores)
-    classical_reported = json.loads((data.PROJECT_ROOT / "reference" / "classical" / "best_model.json").read_text())["validation"]["used_threshold"]
+    classical_reported = json.loads((data.PROJECT_ROOT / "reference" / "classical" / "best_model.json").read_text(encoding="utf-8"))["validation"]["used_threshold"]
 
     report = {
         "model": f"{model_source.MODEL_ID}@{model_source.REVISION}",

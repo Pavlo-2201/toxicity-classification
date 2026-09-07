@@ -7,9 +7,11 @@ import shutil
 from pathlib import Path
 
 from rubert_clf import model_source as ms
+from rubert_clf.cli import use_utf8_stdio
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--from-dir", type=Path, help="папка с уже скачанными файлами ревизии")
     parser.add_argument("--model-dir", type=Path, default=ms.MODEL_DIR)

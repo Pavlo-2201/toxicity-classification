@@ -11,9 +11,11 @@ from rubert_clf import data, splits
 from rubert_clf.finetune import write_json
 from rubert_clf.inference import ToxicityClassifier
 from rubert_clf.metrics import bootstrap_f1_ci, classification_metrics
+from rubert_clf.cli import use_utf8_stdio
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--model-dir", type=Path, default=data.PROJECT_ROOT / "models" / "rubert-toxic")
     parser.add_argument("--split", choices=splits.SPLITS, default="validation")

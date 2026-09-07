@@ -7,11 +7,13 @@ import json
 from pathlib import Path
 
 from rubert_clf import data, splits
+from rubert_clf.cli import use_utf8_stdio
 
 REPORT = data.PROJECT_ROOT / "reports" / "split_check.json"
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--classical-repo", type=Path, help="рабочая копия russian-text-classification (необязательно)")
     args = parser.parse_args()
