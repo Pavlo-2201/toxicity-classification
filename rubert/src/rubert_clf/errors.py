@@ -6,18 +6,56 @@ import re
 
 SHORT_MAX_CHARS = 40
 
-# Корни русской обсценной лексики (мат) и её распространённых замен
+# Слово — непрерывная последовательность букв и цифр. Категории проверяются по целым словам,
+# поэтому корень внутри нейтрального слова («плохо», «ожидать», «колебания») не срабатывает.
+TOKEN = re.compile(r"\w+")
+# Латинские буквы, похожие на кириллические: «xуй», «cука». Заменяются только в словах,
+# где уже есть кириллица, чтобы не трогать английский текст.
+HOMOGLYPHS = str.maketrans("aceopxykmth", "асеорхукмтн")
+CYRILLIC = re.compile(r"[а-яё]")
+STRETCHED = re.compile(r"(\w)\1{2,}")
+
+# Приставки, с которыми обсценные корни образуют глаголы и причастия: «нахуй», «распиздяй», «заебал».
+PREFIX = r"(?:за|вы|до|по|на|от|при|про|пере|недо|у|раз|рас|о|ни|с)?"
+# Для корня «еб/ёб» «с», «в» и «о» допустимы только с твёрдым или мягким знаком: иначе «себе», «вебинар».
+EB_PREFIX = r"(?:(?:за|вы|до|по|на|при|про|пере|недо|у|(?:под|от|раз|с|в|об|из|вз)[ъь])){0,2}"
+
+# Мат. Слово целиком совпадает с одной из форм; корень «еб/ёб» должен стоять в начале
+# (после допустимых приставок), иначе срабатывают «колебания», «небанальный», «хлебать».
 OBSCENE = re.compile(
-    r"(?<![а-яё])(х[уy][йяеёию]|пизд|п[иі]зд|[её]б[аеиуы]|[её]бл|\w*[её]б(ан|ну|ат|ыв|ал)|бля|бляд|муд[аио]|залуп|"
-    r"пид[оа]р|сук[аи]?(?![а-яё])|сучк)",
-    re.IGNORECASE,
+    "|".join([
+        rf"{PREFIX}ху[йяеёию]\w*",
+        rf"{EB_PREFIX}[её]б[аеёиуылн]\w*",
+        r"гр[её]бан\w*",  # распространённая замена
+        r"(?:вы)?бля(?:т\w*|ть)?|(?:бля)+",
+        r"муд(?:ак|ач|ац|ил|оз|оф|ох|ень)\w*",
+        r"залуп\w*",
+        r"пид[оа]р\w*",
+        r"сук[аиеуо]?|сучк[аиеуо]|сучар\w*",
+    ]),
 )
-# Явные оскорбления без мата
+# Корни без нейтральных однокоренных слов ищутся и внутри слова: «хитровыпизднутый», «выблядок».
+OBSCENE_ANYWHERE = re.compile(r"пизд|пізд|бляд|долбо[её]б")
+
+# Явные оскорбления без мата. Корни, у которых есть нейтральные однокоренные слова,
+# перечислены формами: «лох», но не «лохматый»; «жид», но не «жидкий»; «скот», но не «скотч».
 INSULT = re.compile(
-    r"(идиот|дебил|дур[ао]к|дура(?![а-яё])|урод|туп[оыа]|мраз|твар|скот|быдл|чмо|лох|петух|долба|даун|"
-    r"дегенерат|кретин|ублюд|гнид|выродок|шлюх|ничтожеств|хохл|хач|жид|чурк|пидр|педик|свин)",
-    re.IGNORECASE,
+    "|".join([
+        r"дур[ао]к\w*", r"придур\w*", r"дур(?:а|ы|е|у|ой|ёха|еха|очк\w*|ень)",
+        r"урод(?!ил|ит)\w*",
+        r"туп(?:ой|ого|ому|ым|ом|ая|ое|ую|ые|ых|ыми|ица|ицы|иц|ость\w*|оры\w*|орот\w*|о|а)",
+        r"твар\w*", r"скот(?:а|у|ом|ы|ов|ам|ами|ах)?|скотин\w*|скотск\w*",
+        r"чмо(?!к)\w*|чмыр\w*",
+        r"лох(?:и|а|у|ом|ов|ам|ами|ах|е)?|лошар\w*|лохушк\w*", r"петух\w*",
+        r"(?:раз)?долба\w*|долбо\w*", r"\w*даун(?:а|у|ом|е|ы|ов|ам|ами|ах|ск\w*|ят\w*|ище)?",
+        r"гнид\w*", r"выродо?к\w*", r"ничтожеств\w*",
+        r"хохл(?!ат)\w*|хохол", r"хач(?:и|а|у|ом|ей|ам|ами|ах|ик\w*|ьё|ье)?|хаче\w*",
+        r"жид(?:а|у|ом|е|ы|ов\w*|ам|ами|ах|яр\w*|ёнок|енок)?|жидо\w*", r"чурк\w*", r"пидр\w*", r"педик\w*",
+        r"свин(?:ья|ьи|ье|ью|ьей|ей|ьям|ями|ьях)?|свинюш\w*|свиняч\w*|свинот\w*|свинск\w*",
+    ]),
 )
+INSULT_ANYWHERE = re.compile(r"идиот|дебил|кретин|ублюд|шлюх|мраз|быдл|дегенерат")
+
 # Признаки намеренного искажения: маскировка точками/звёздочками, латиница внутри кириллицы, растянутые буквы
 OBFUSCATION = re.compile(
     r"([а-яё][*.]{1,3}[а-яё])|([а-яё][a-z]|[a-z][а-яё])|(([а-яё])\4{2,})",
@@ -25,24 +63,48 @@ OBFUSCATION = re.compile(
 )
 
 
+def tokens(text: str) -> list[str]:
+    """Слова в нижнем регистре; латиница-двойник заменена, растянутые буквы схлопнуты («бляяя» → «бля»)."""
+    words = (STRETCHED.sub(r"\1", w) for w in TOKEN.findall(text.lower()))
+    return [w.translate(HOMOGLYPHS) if CYRILLIC.search(w) else w for w in words]
+
+
+def has_obscene(text: str) -> bool:
+    return any(OBSCENE.fullmatch(w) or OBSCENE_ANYWHERE.search(w) for w in tokens(text))
+
+
+def has_insult(text: str) -> bool:
+    return any(INSULT.fullmatch(w) or INSULT_ANYWHERE.search(w) for w in tokens(text))
+
+
 def categorize(text: str, oov_share: float) -> dict[str, bool]:
     stripped = text.strip()
+    obscene, insult = has_obscene(stripped), has_insult(stripped)
     return {
         "short": len(stripped) <= SHORT_MAX_CHARS,
-        "obscene": bool(OBSCENE.search(stripped)),
-        "insult_lexicon": bool(INSULT.search(stripped)),
+        "obscene": obscene,
+        "insult_lexicon": insult,
         "obfuscation_or_typos": bool(OBFUSCATION.search(stripped)) or oov_share >= 0.3,
-        "no_explicit_markers": not OBSCENE.search(stripped) and not INSULT.search(stripped),
+        "no_explicit_markers": not obscene and not insult,
     }
 
 
-WORD = re.compile(r"\w+")
-
-
 def train_vocabulary(texts) -> set[str]:
-    return {w for t in texts for w in WORD.findall(t.lower())}
+    return {w for t in texts for w in TOKEN.findall(t.lower())}
 
 
 def oov_share(text: str, vocab: set[str]) -> float:
-    words = WORD.findall(text.lower())
+    words = TOKEN.findall(text.lower())
     return sum(w not in vocab for w in words) / max(len(words), 1)
+
+
+def rates_by_group(groups: dict, y, preds: dict) -> dict:
+    """FP и FN rate каждой модели внутри каждой группы. groups: {имя: булева маска}, preds: {модель: 0/1}."""
+    by_group = {}
+    for g, mask in groups.items():
+        neg, pos = mask & (y == 0), mask & (y == 1)
+        by_group[g] = {"n": int(mask.sum()), "n_toxic": int(pos.sum())}
+        for name, pred in preds.items():
+            by_group[g][name] = {"fp_rate": round(float((pred[neg] == 1).mean()), 3) if neg.any() else None,
+                                 "fn_rate": round(float((pred[pos] == 0).mean()), 3) if pos.any() else None}
+    return by_group

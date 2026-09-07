@@ -17,11 +17,12 @@ from transformers import AutoModel, AutoModelForSequenceClassification, AutoToke
 from rubert_clf import data, model_source, splits
 from rubert_clf.dataset import ToxicCommentsDataset, make_length_sorted_dataloader
 from rubert_clf.embeddings import extract_embeddings
-from rubert_clf.errors import categorize, oov_share, train_vocabulary
+from rubert_clf.errors import categorize, oov_share, rates_by_group, train_vocabulary
 from rubert_clf.finetune import predict_proba, write_json
 from rubert_clf.metrics import bootstrap_f1_ci, classification_metrics, mcnemar, paired_bootstrap_f1_diff
 from rubert_clf.runtime import get_device, set_seed
 from rubert_clf.tfidf_baseline import CLASSICAL_DIR, build_classical_baseline
+from rubert_clf.cli import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 STAGE3 = REPORTS / "experiments" / "stage3_frozen_encoder.json"
@@ -54,6 +55,7 @@ def class_separation(cls_emb: np.ndarray, y: np.ndarray) -> dict:
 
 
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--device", default="auto")
     args = parser.parse_args()
@@ -162,7 +164,7 @@ def main() -> None:
         "tfidf_score": tfidf_test_scores.round(6), "tfidf_pred": preds["tfidf_linearsvc"][0],
         "frozen_prob": frozen_test_probs.round(6), "frozen_pred": preds["frozen_rubert_logreg"][0],
         "finetuned_prob": ft_test_probs.round(6), "finetuned_pred": preds["finetuned_rubert"][0],
-    }).to_csv(REPORTS / "test_predictions_all.csv", index=False)
+    }).to_csv(REPORTS / "test_predictions_all.csv", index=False, lineterminator="\n")
 
     # Анализ ошибок на validation — тех же текстах, что в классическом проекте
     vocab = train_vocabulary(train[data.TEXT_COL])
@@ -173,13 +175,7 @@ def main() -> None:
         "finetuned_rubert": (ft_val_probs >= ft_threshold).astype(int),
     }
     groups = {"all": np.ones(len(val), bool), **{c: cats[c].values for c in cats.columns}}
-    by_group = {}
-    for g, mask in groups.items():
-        neg, pos = mask & (y_val == 0), mask & (y_val == 1)
-        by_group[g] = {"n": int(mask.sum()), "n_toxic": int(pos.sum())}
-        for name, pred in val_preds.items():
-            by_group[g][name] = {"fp_rate": round(float((pred[neg] == 1).mean()), 3) if neg.any() else None,
-                                 "fn_rate": round(float((pred[pos] == 0).mean()), 3) if pos.any() else None}
+    by_group = rates_by_group(groups, y_val, val_preds)
     classical_errors = pd.read_csv(CLASSICAL_DIR / "validation_errors.csv")
     tfidf_wrong = val_preds["tfidf_linearsvc"] != y_val
     ft_wrong = val_preds["finetuned_rubert"] != y_val
@@ -233,8 +229,13 @@ def main() -> None:
         fixed.nlargest(10, "margin").assign(source="fixed_by_finetuned"),
         new.nlargest(10, "margin").assign(source="new_error_of_finetuned"),
     ]).drop(columns=["margin", *cats.columns])
-    pd.concat([examples, extra], ignore_index=True).to_csv(REPORTS / "error_examples_rubert.csv", index=False)
-    val_table.drop(columns=[data.TEXT_COL]).to_csv(REPORTS / "validation_predictions_all.csv", index=False)
+    # тексты комментариев (GPL-2.0) — только в локальной копии; в репозитории — идентификаторы и оценки
+    examples_all = pd.concat([examples, extra], ignore_index=True)
+    (REPORTS / "local").mkdir(exist_ok=True)
+    examples_all.to_csv(REPORTS / "local" / "error_examples_rubert_with_text.csv", index=False, lineterminator="\n")
+    examples_all.drop(columns=[data.TEXT_COL]).to_csv(REPORTS / "error_examples_rubert.csv", index=False,
+                                                      lineterminator="\n")
+    val_table.drop(columns=[data.TEXT_COL]).to_csv(REPORTS / "validation_predictions_all.csv", index=False, lineterminator="\n")
 
     write_json(REPORTS / "error_analysis_rubert.json", {
         "split": "validation",
