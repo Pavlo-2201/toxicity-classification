@@ -1,0 +1,31 @@
+{
+  "description": "Протокол. Записан до запуска экспериментов; правило выбора не меняется по их результатам.",
+  "seeds": [42, 43, 44],
+  "calibration_split": {"share_of_train": 0.15, "seed": 42, "stratified": true},
+  "epoch_selection": "максимум AP на validation",
+  "threshold": "максимум F1 токсичного класса на калибровочной части train",
+  "long_texts": "тексты длиннее 128 токенов токенизатора rubert-tiny2",
+  "final_selection_rule": [
+    "1. Для каждой конфигурации — среднее и стандартное отклонение AP на validation по seed.",
+    "2. Лучшая — с максимальным средним AP. Эквивалентные ей — конфигурации, у которых среднее AP ниже не больше чем на стандартное отклонение лучшей (минимум 0.002).",
+    "3. Среди эквивалентных выбирается самая дешёвая по инференсу на CPU (мс на текст), если её AP на длинных текстах validation (среднее по seed) не хуже лучшей больше чем на 0.01; иначе следующая по стоимости.",
+    "4. Test смотрится только для итогового отчёта: обе метрики — при пороге 0.5 и при пороге с калибровочной части."
+  ],
+  "candidates": [
+    {"name": "tiny_L64", "model_dir": "models/rubert-tiny2", "max_length": 64, "truncation": "head", "lr": 0.0002, "epochs": 3, "batch_size": 32},
+    {"name": "tiny_L128", "model_dir": "models/rubert-tiny2", "max_length": 128, "truncation": "head", "lr": 0.0002, "epochs": 3, "batch_size": 32},
+    {"name": "tiny_L256", "model_dir": "models/rubert-tiny2", "max_length": 256, "truncation": "head", "lr": 0.0002, "epochs": 3, "batch_size": 32},
+    {"name": "tiny_L128_headtail", "model_dir": "models/rubert-tiny2", "max_length": 128, "truncation": "head_tail", "lr": 0.0002, "epochs": 3, "batch_size": 32},
+    {"name": "base_L128", "model_dir": "models/ruBert-base", "max_length": 128, "truncation": "head", "lr": 3e-05, "epochs": 3, "batch_size": 16},
+    {"name": "base_L128_lora", "model_dir": "models/ruBert-base", "max_length": 128, "truncation": "head", "lr": 0.0003, "epochs": 3, "batch_size": 16,
+     "lora": {"r": 16, "lora_alpha": 32, "lora_dropout": 0.1, "target_modules": ["query", "value"]}}
+  ],
+  "ready_classifiers": [
+    {"name": "cointegrated/rubert-tiny-toxicity", "revision": "5d37eff844868e243467e4c38898bad46c271af2", "dir": "models/ready/rubert-tiny-toxicity",
+     "score": "1 - P(non-toxic) (sigmoid, мультиметочная голова)",
+     "training_data": "OK ML Cup (ok.ru) и Babakov et al. 2021 (по карточке модели)"},
+    {"name": "s-nlp/russian_toxicity_classifier", "revision": "0694e1f99efc08e73479e5c6f06c7bbe393aca89", "dir": "models/ready/russian_toxicity_classifier",
+     "score": "P(toxic) (softmax)",
+     "training_data": "Russian Language Toxic Comments (2ch/pikabu — наш корпус) + Toxic Russian Comments (ok.ru), случайное разбиение 80/10/10 (по карточке модели)"}
+  ]
+}

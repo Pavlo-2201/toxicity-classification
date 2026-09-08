@@ -9,15 +9,34 @@ from torch.utils.data import DataLoader, Dataset, Sampler, Subset
 from rubert_clf.text import normalize_texts
 
 
+def head_tail_ids(tokenizer, ids: list[int], max_length: int, head_share: float = 0.5) -> list[int]:
+    """Начало и конец длинного текста: head_share бюджета — первые токены, остаток — последние.
+
+    ids — токены без спецтокенов; спецтокены ([CLS] ... [SEP]) добавляются здесь.
+    """
+    budget = max_length - tokenizer.num_special_tokens_to_add(pair=False)
+    if len(ids) > budget:
+        head = int(budget * head_share)
+        ids = ids[:head] + ids[len(ids) - (budget - head):]
+    return tokenizer.build_inputs_with_special_tokens(ids)
+
+
 class ToxicCommentsDataset(Dataset):
-    def __init__(self, texts, labels, tokenizer, max_length: int):
+    def __init__(self, texts, labels, tokenizer, max_length: int, truncation: str = "head"):
         self.texts = normalize_texts(texts)
         self.labels = None if labels is None else [int(y) for y in labels]
         self.max_length = max_length
+        self.truncation = truncation
         # Длины без обрезки нужны, чтобы знать, сколько текстов теряют хвост при truncation.
         self.full_lengths = [len(ids) for ids in tokenizer(self.texts, truncation=False)["input_ids"]]
-        encoded = tokenizer(self.texts, truncation=True, max_length=max_length, padding=False)
-        self.input_ids = encoded["input_ids"]
+        if truncation == "head":
+            encoded = tokenizer(self.texts, truncation=True, max_length=max_length, padding=False)
+            self.input_ids = encoded["input_ids"]
+        elif truncation == "head_tail":
+            raw = tokenizer(self.texts, add_special_tokens=False, truncation=False)["input_ids"]
+            self.input_ids = [head_tail_ids(tokenizer, ids, max_length) for ids in raw]
+        else:
+            raise ValueError(f"Неизвестная обрезка: {truncation}")
 
     def __len__(self) -> int:
         return len(self.input_ids)
