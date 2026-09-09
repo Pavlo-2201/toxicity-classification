@@ -22,6 +22,7 @@ class ToxicityClassifier:
         self.device = device
         self.threshold = float(selection["threshold"])
         self.max_length = int(selection["config"]["max_length"])
+        self.truncation = selection["config"].get("truncation", "head")
 
     @classmethod
     def load(cls, model_dir: Path, device: str = "auto") -> "ToxicityClassifier":
@@ -39,7 +40,7 @@ class ToxicityClassifier:
         texts = list(texts)
         if not texts:
             return np.empty(0)
-        ds = ToxicCommentsDataset(texts, None, self.tokenizer, self.max_length)
+        ds = ToxicCommentsDataset(texts, None, self.tokenizer, self.max_length, self.truncation)
         loader, order = make_length_sorted_dataloader(ds, self.tokenizer, batch_size)
         return predict_proba(self.model, loader, self.device, order)[0]
 

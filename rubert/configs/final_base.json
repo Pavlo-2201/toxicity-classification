@@ -1,0 +1,6 @@
+{
+  "description": "Итоговая модель по протоколу AP на validation, порог на калибровочной части train (docs/experiments.md): прогон кандидата base_L128 с seed 42 ровно как в экспериментах (те же гиперпараметры, 3 эпохи и расписание lr на 3 эпохи). Сохраняются веса эпохи с максимальным AP на validation; порог — по калибровочной части train. Отчёт прогона пишется в reports/final_runs/. Ревизия энкодера — из реестра src/rubert_clf/model_source.py, файлы сверяются перед обучением.",
+  "protocol": "configs/protocol.json",
+  "candidate": "base_L128",
+  "seed": 42
+}

@@ -1,4 +1,9 @@
-"""Обучение итоговой модели: дообучение rubert-tiny2 на train с выбором эпохи и порога по validation."""
+"""Обучение итоговой модели.
+
+По умолчанию — ruBert-base по протоколу (configs/final_base.json): обучение на train без
+калибровочной части, число эпох из протокола, порог по калибровочной части. --smoke и --config с
+FinetuneConfig — короткое обучение rubert-tiny2 для smoke-проверок и пользовательских конфигураций.
+"""
 
 from __future__ import annotations
 
@@ -17,14 +22,57 @@ from rubert_clf import data, model_source, splits
 from rubert_clf.dataset import ToxicCommentsDataset
 from rubert_clf.finetune import FinetuneConfig, build_model, fit, write_json
 from rubert_clf.runtime import get_device, set_seed
+from rubert_clf.cli import use_utf8_stdio
 
 DEFAULT_CONFIG = data.PROJECT_ROOT / "configs" / "finetune_best.json"
+FINAL_CONFIG = data.PROJECT_ROOT / "configs" / "final_base.json"
 SMOKE_CONFIG = data.PROJECT_ROOT / "configs" / "smoke.json"
 
 
+def train_final(raw: dict, config_path: Path, args) -> None:
+    """Итоговая модель по протоколу: сохраняется в формате Hugging Face с selection.json."""
+    from rubert_clf.protocol import RunSpec, calibration_split, long_mask, run
+
+    device = get_device(args.device)
+    parts = splits.load_splits()
+    fit_df, calib_df = calibration_split(parts["train"])
+    sets = {"fit": fit_df, "calibration": calib_df, "validation": parts["validation"], "test": parts["test"]}
+    masks = {k: long_mask(sets[k][data.TEXT_COL]) for k in ("validation", "test")}
+    spec = RunSpec(name="final", model_dir=str(data.PROJECT_ROOT / raw["model_dir"]), max_length=raw["max_length"],
+                   truncation=raw["truncation"], lr=raw["lr"], epochs=raw["epochs"], batch_size=raw["batch_size"],
+                   seed=raw["seed"], extra={"use_last_epoch": True, "keep_model": True})
+    print(f"fit {len(fit_df)}, калибровка {len(calib_df)}, устройство {device}, конфигурация {config_path.name}")
+    start = time.perf_counter()
+    result = run(spec, sets, device, masks)
+    output_dir = args.output_dir or data.PROJECT_ROOT / "models" / "rubert-toxic"
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True)
+    result["model"].save_pretrained(output_dir)
+    result["tokenizer"].save_pretrained(output_dir)
+    selection = {"epoch": raw["epochs"], "threshold": result["threshold"], "threshold_rule": result["threshold_rule"],
+                 "config": {"max_length": raw["max_length"], "truncation": raw["truncation"], "lr": raw["lr"],
+                            "batch_size": raw["batch_size"], "epochs": raw["epochs"], "seed": raw["seed"]},
+                 "base_model": f"{raw['model_id']}@{raw['revision']}", "protocol": "AP на validation, порог на калибровочной части train (docs/experiments.md)",
+                 "validation_at_0.5": result["validation"]["at_0.5"],
+                 "validation_at_threshold": result["validation"]["at_calibrated_threshold"]}
+    write_json(output_dir / "selection.json", selection)
+    write_json(output_dir / "train_metadata.json", {
+        "mode": "final", "config_file": config_path.name, "base_model": selection["base_model"],
+        "data_manifest_sha256": splits.MANIFEST_SHA256, "data_fingerprint": data.EXPECTED_FINGERPRINT,
+        "n_fit": len(fit_df), "n_calibration": len(calib_df), "device": str(device), "torch": torch.__version__,
+        "transformers": transformers.__version__, "python": platform.python_version(),
+        "total_seconds": round(time.perf_counter() - start, 1), "epochs": result["epochs"],
+    })
+    print(f"порог {result['threshold']:.4f}; validation F1 {result['validation']['at_calibrated_threshold']['f1_toxic']}, "
+          f"AP {result['validation']['at_0.5']['average_precision']}")
+    print(f"Модель сохранена в {output_dir}")
+
+
 def main() -> None:
+    use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", type=Path, default=None, help=f"JSON с FinetuneConfig (по умолчанию {DEFAULT_CONFIG.name})")
+    parser.add_argument("--config", type=Path, default=None, help=f"конфигурация (по умолчанию {FINAL_CONFIG.name})")
     parser.add_argument("--smoke", action="store_true", help=f"малая выборка и 1 эпоха ({SMOKE_CONFIG.name})")
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--base-model-dir", type=Path, default=model_source.MODEL_DIR,
@@ -34,8 +82,11 @@ def main() -> None:
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
 
-    config_path = args.config or (SMOKE_CONFIG if args.smoke else DEFAULT_CONFIG)
+    config_path = args.config or (SMOKE_CONFIG if args.smoke else FINAL_CONFIG)
     raw = json.loads(config_path.read_text(encoding="utf-8"))
+    if "model_dir" in raw:
+        train_final(raw, config_path, args)
+        return
     config = FinetuneConfig.from_dict(raw)
     output_dir = args.output_dir or data.PROJECT_ROOT / "models" / ("smoke" if args.smoke else "rubert-toxic")
     checkpoint_dir = args.checkpoint_dir or data.PROJECT_ROOT / "checkpoints" / output_dir.name
