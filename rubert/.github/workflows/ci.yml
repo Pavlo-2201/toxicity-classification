@@ -1,0 +1,38 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Line endings are LF in the index (split manifest SHA-256 depends on bytes)
+        shell: bash
+        run: |
+          if git ls-files --eol | grep -E "^i/(crlf|mixed)"; then echo "CRLF in index"; exit 1; fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.12"
+          cache: pip
+      - name: Clean install (CPU torch)
+        run: |
+          python -m pip install "torch==2.8.0" --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements.txt
+          python -m pip install --no-deps -e .
+      - uses: actions/cache@v4
+        with:
+          path: models/rubert-tiny2
+          key: rubert-tiny2-e8ed3b0c8bbf4fb6984c3de043bf7d2f4e5969ae
+      - name: Data and pinned model revision (hashes are checked)
+        run: |
+          python scripts/download_data.py
+          python scripts/download_model.py
+      - name: Tests (incl. smoke training on CPU and UTF-8 CLI)
+        run: python -m pytest -q
