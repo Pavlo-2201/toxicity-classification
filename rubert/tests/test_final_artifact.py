@@ -58,6 +58,7 @@ def test_loaded_artifact_reproduces_run_predictions_and_threshold(exported):
     clf = ToxicityClassifier.load(exported["model_dir"], "cpu")
     result = exported["result"]
     assert clf.threshold == result["threshold"] and clf.selection["epoch"] == result["selected_epoch"]
+    assert result["spec"]["model_dir"] == "models/rubert-tiny2"  # в отчёте путь от корня проекта, не абсолютный
     assert clf.run_report["checkpoint"]["model_safetensors_sha256"] == data.sha256_file(exported["model_dir"] / "model.safetensors")
     probs = clf.predict_proba(TEXTS)
     np.testing.assert_allclose(probs, result["predictions"]["validation"], atol=2e-5)

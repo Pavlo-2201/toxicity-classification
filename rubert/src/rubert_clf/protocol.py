@@ -169,8 +169,9 @@ def run(spec: RunSpec, parts: dict[str, pd.DataFrame], device: torch.device, lon
     y = {name: np.asarray(sets[name].labels) for name in ("calibration", "validation", "test")}
     threshold, calib_f1 = best_f1_threshold(y["calibration"], best["probs"]["calibration"])
     result = {
+        # путь к энкодеру — от корня проекта: отчёт не зависит от машины, где шёл прогон
         "environment": capture(neural=True),
-        "spec": asdict(spec),
+        "spec": asdict(spec) | {"model_dir": data.project_relative(spec.model_dir)},
         "base_model": pinned.pinned if pinned else f"не из реестра: {spec.model_dir}",
         "parameters": {"trainable": int(trainable), "total": int(total)},
         "device": str(device),

@@ -32,14 +32,6 @@ FINAL_CONFIG = data.PROJECT_ROOT / "configs" / "final_base.json"
 SMOKE_CONFIG = data.PROJECT_ROOT / "configs" / "smoke.json"
 
 
-def relative(path: Path) -> str:
-    path = Path(path).resolve()
-    try:
-        return path.relative_to(data.PROJECT_ROOT).as_posix()
-    except ValueError:
-        return str(path)
-
-
 def export_final(result: dict, candidate: dict, seed: int, protocol_path: Path, output_dir: Path, run_report: Path) -> dict:
     """Артефакт: веса и токенизатор выбранной эпохи, отчёт прогона с SHA-256 весов, selection.json.
 
@@ -64,7 +56,7 @@ def export_final(result: dict, candidate: dict, seed: int, protocol_path: Path, 
         model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
     weights = output_dir / ("adapter_model.safetensors" if adapter else "model.safetensors")
-    result["checkpoint"] = {"model_dir": relative(output_dir), "epoch": result["selected_epoch"],
+    result["checkpoint"] = {"model_dir": data.project_relative(output_dir), "epoch": result["selected_epoch"],
                             f"{weights.name.replace('.', '_')}_sha256": data.sha256_file(weights)}
     write_json(run_report, result)
 
@@ -72,7 +64,7 @@ def export_final(result: dict, candidate: dict, seed: int, protocol_path: Path, 
                  "threshold_rule": result["threshold_rule"], "selection_rule": result["selection_rule"],
                  "config": {k: candidate[k] for k in ("max_length", "truncation", "lr", "batch_size", "epochs", "lora")
                             if k in candidate} | {"seed": seed},
-                 "run": {"candidate": candidate["name"], "seed": seed, "report": relative(run_report),
+                 "run": {"candidate": candidate["name"], "seed": seed, "report": data.project_relative(run_report),
                          "protocol_sha256": data.sha256_file(protocol_path)},
                  "epochs_validation_ap": {e["epoch"]: e["validation"]["average_precision"] for e in result["epochs"]},
                  "base_model": result["base_model"], "protocol": "AP на validation, порог на калибровочной части train (docs/experiments.md)",
@@ -114,7 +106,7 @@ def train_final(raw: dict, config_path: Path, args) -> None:
     selection = export_final(result, candidate, raw["seed"], protocol_path, output_dir, run_report)
     write_json(output_dir / "train_metadata.json", {
         "mode": "final", "config_file": config_path.name, "base_model": selection["base_model"],
-        "run_report": relative(run_report),
+        "run_report": data.project_relative(run_report),
         "data_manifest_sha256": splits.MANIFEST_SHA256, "data_fingerprint": data.EXPECTED_FINGERPRINT,
         "n_fit": len(fit_df), "n_calibration": len(calib_df), "device": str(device),
         "gpu": torch.cuda.get_device_name(0) if device.type == "cuda" else None, "torch": torch.__version__,

@@ -19,6 +19,8 @@
 
 from __future__ import annotations
 
+from rubert_clf.environment import capture
+
 import argparse
 import json
 import os
@@ -42,13 +44,6 @@ RUN_ATOL = 1e-4  # вероятности отчёта округлены до 5
 FLOAT32_ATOL = 1e-2  # float32 против float16 прогона: заведомо больше ожидаемых ~1e-3
 CLI_ATOL = 1e-4  # predict.py печатает 4 знака
 CLI_TEXTS = 8
-
-
-def relative(path: Path) -> str:
-    try:
-        return Path(path).resolve().relative_to(data.PROJECT_ROOT).as_posix()
-    except ValueError:
-        return str(path)
 
 
 def tokenizer_check(clf: ToxicityClassifier, texts: list[str]) -> dict:
@@ -148,7 +143,7 @@ def main() -> None:
     ok = all(c.get("ok", True) for c in [checks["artifact_matches_run_report"], checks["tokenizer_matches_base"],
                                          checks["cli"], *checks["inference_path"].values()]
              ) and all(c.get("ok", True) for c in checks["run_conditions"].values() if isinstance(c, dict))
-    result = {"model_dir": relative(args.model_dir), "run_report": clf.selection["run"]["report"],
+    result = {"environment": capture(neural=True), "model_dir": data.project_relative(args.model_dir), "run_report": clf.selection["run"]["report"],
               "device": str(clf.device), "gpu": torch.cuda.get_device_name(0) if clf.device.type == "cuda" else None,
               "checks": checks, "ok": ok}
     out_path = data.PROJECT_ROOT / "reports" / "eval" / f"{args.model_dir.name}_check.json"

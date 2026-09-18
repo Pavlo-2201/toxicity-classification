@@ -41,14 +41,6 @@ class ResumeError(ValueError):
     """Каталог нельзя продолжить: другая процедура или чужие отчёты."""
 
 
-def relative(path: Path) -> str:
-    path = Path(path).resolve()
-    try:
-        return path.relative_to(data.PROJECT_ROOT).as_posix()
-    except ValueError:
-        return str(path)
-
-
 def now() -> str:
     return dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -122,9 +114,9 @@ def fingerprint(protocol_path: Path, protocol: dict, runs: list[str], parts: dic
     models = {}
     for model_dir in model_dirs(protocol, runs):
         pinned = model_source.verify_registered(model_dir)  # ошибка, если файлы не совпали с ревизией
-        models[relative(model_dir)] = pinned.pinned if pinned else "не из реестра"
+        models[data.project_relative(model_dir)] = pinned.pinned if pinned else "не из реестра"
     return {
-        "protocol": {"path": relative(protocol_path), "sha256": data.sha256_file(protocol_path)},
+        "protocol": {"path": data.project_relative(protocol_path), "sha256": data.sha256_file(protocol_path)},
         "data": {"split_manifest_sha256": splits.MANIFEST_SHA256, "dataset_fingerprint": data.EXPECTED_FINGERPRINT,
                  "rows": {name: len(df) for name, df in parts.items()},
                  "calibration_source_rows_sha256": array_sha256(parts["calibration"][data.ID_COL]),
