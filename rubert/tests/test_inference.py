@@ -28,9 +28,14 @@ def test_saved_model_reproduces_validation_probabilities(tokenizer, tmp_path):
     model_dir, history = _trained_dir(tokenizer, tmp_path)
     clf = ToxicityClassifier.load(model_dir, "cpu")
     best = history[clf.selection["epoch"] - 1]
-    np.testing.assert_allclose(clf.predict_proba(TEXTS), best["val_probs"], atol=1e-5)
+    probs, expected = clf.predict_proba(TEXTS), np.asarray(best["val_probs"])
+    np.testing.assert_allclose(probs, expected, atol=1e-5)
     assert clf.max_length == 16 and clf.threshold == best["val_threshold"]
-    np.testing.assert_array_equal(clf.predict(TEXTS), (np.asarray(best["val_probs"]) >= clf.threshold).astype(int))
+    np.testing.assert_array_equal(clf.predict(TEXTS), (probs >= clf.threshold).astype(int))
+    # порог — одна из вероятностей validation (precision_recall_curve): у этого текста решение зависит
+    # от последних битов пересчёта, поэтому с обучением сверяются только тексты не на самом пороге
+    away = np.abs(expected - clf.threshold) > 1e-5
+    np.testing.assert_array_equal(clf.predict(TEXTS)[away], (expected[away] >= clf.threshold).astype(int))
     assert clf.predict_proba([]).shape == (0,)
 
 
@@ -47,7 +52,7 @@ def test_predict_cli(tokenizer, tmp_path):
 def test_train_cli_smoke(dataset, tokenizer, tmp_path):
     subprocess.run([sys.executable, str(data.PROJECT_ROOT / "train.py"), "--smoke", "--device", "cpu",
                     "--output-dir", str(tmp_path / "model"), "--checkpoint-dir", str(tmp_path / "ckpt")],
-                   capture_output=True, text=True, check=True)
+                   capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
     meta = json.loads((tmp_path / "model" / "train_metadata.json").read_text(encoding="utf-8"))
     assert meta["mode"] == "smoke" and meta["n_train"] == 256
     assert ToxicityClassifier.load(tmp_path / "model", "cpu").predict(["Ты дурак!"]).shape == (1,)

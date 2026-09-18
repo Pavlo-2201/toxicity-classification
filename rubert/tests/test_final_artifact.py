@@ -60,9 +60,12 @@ def test_loaded_artifact_reproduces_run_predictions_and_threshold(exported):
     assert clf.threshold == result["threshold"] and clf.selection["epoch"] == result["selected_epoch"]
     assert result["spec"]["model_dir"] == "models/rubert-tiny2"  # в отчёте путь от корня проекта, не абсолютный
     assert clf.run_report["checkpoint"]["model_safetensors_sha256"] == data.sha256_file(exported["model_dir"] / "model.safetensors")
-    probs = clf.predict_proba(TEXTS)
-    np.testing.assert_allclose(probs, result["predictions"]["validation"], atol=2e-5)
-    assert clf.predict(TEXTS).tolist() == (np.asarray(result["predictions"]["validation"]) >= clf.threshold).astype(int).tolist()
+    probs, expected = clf.predict_proba(TEXTS), np.asarray(result["predictions"]["validation"])
+    np.testing.assert_allclose(probs, expected, atol=2e-5)
+    assert clf.predict(TEXTS).tolist() == (probs >= clf.threshold).astype(int).tolist()
+    # порог подобран на тех же текстах и равен одной из вероятностей; в отчёте они ещё и округлены
+    away = np.abs(expected - clf.threshold) > 2e-5
+    assert clf.predict(TEXTS)[away].tolist() == (expected[away] >= clf.threshold).astype(int).tolist()
 
 
 def test_changed_threshold_is_rejected(exported, tmp_path):
