@@ -64,7 +64,7 @@ def main() -> None:
     report["passed"] = bool(all(checks))
 
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps(report, ensure_ascii=False, indent=2))
     if not report["passed"]:
         raise SystemExit("Проверка разбиений не пройдена")

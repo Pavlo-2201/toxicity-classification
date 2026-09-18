@@ -136,7 +136,7 @@ def main() -> None:
         },
     }
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
-    (REPORT_DIR / "stage3_frozen_encoder.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (REPORT_DIR / "stage3_frozen_encoder.json").write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     print(json.dumps({k: report[k] for k in ("best", "threshold", "validation", "tfidf_baseline")}, ensure_ascii=False, indent=2))
 
 

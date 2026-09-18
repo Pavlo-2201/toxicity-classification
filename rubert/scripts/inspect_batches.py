@@ -109,7 +109,7 @@ def main() -> None:
     }
 
     REPORT.parent.mkdir(parents=True, exist_ok=True)
-    REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     summary = {k: v for k, v in report.items() if k != "padding_example"}
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     for ex in report["padding_example"]:

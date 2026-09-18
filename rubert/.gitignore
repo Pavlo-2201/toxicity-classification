@@ -25,3 +25,6 @@ build/
 *.iml
 .vscode/
 reports/local/
+
+# каталоги запусков scripts/experiments.py (опубликованные результаты — experiments/runs)
+experiments/

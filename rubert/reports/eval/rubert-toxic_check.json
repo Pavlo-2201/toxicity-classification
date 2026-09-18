@@ -1,0 +1,120 @@
+{
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8",
+    "torch": "2.8.0+cu128",
+    "transformers": "4.57.6",
+    "tokenizers": "0.22.2",
+    "huggingface_hub": "0.36.0",
+    "safetensors": "0.6.2",
+    "peft": "0.17.1",
+    "accelerate": "1.10.1"
+  },
+  "model_dir": "models/rubert-toxic",
+  "run_report": "reports/final_runs/base_L128__s42.json",
+  "device": "cuda",
+  "gpu": "NVIDIA GeForce RTX 3050 Ti Laptop GPU",
+  "checks": {
+    "artifact_matches_run_report": {
+      "weights": "model.safetensors",
+      "sha256": "380a629bafe60c8f1d561e9115fea1ef0817e4c139bb2d6ab67c9f7660d89ff7",
+      "epoch": 2,
+      "threshold": 0.13083970546722412,
+      "ok": true
+    },
+    "tokenizer_matches_base": {
+      "base_model": "ai-forever/ruBert-base@05f37a2ca9e333fd18f30cd0c96c68d274793c69",
+      "texts": 4234,
+      "texts_with_different_ids": 0,
+      "ok": true
+    },
+    "run_conditions": {
+      "validation": {
+        "max_abs_diff": 5e-06,
+        "atol": 0.0001,
+        "ok": true
+      },
+      "test": {
+        "max_abs_diff": 5e-06,
+        "atol": 0.0001,
+        "ok": true
+      }
+    },
+    "merged_lora": false,
+    "inference_path": {
+      "validation": {
+        "max_abs_diff": 0.001852,
+        "atol": 0.01,
+        "decision_flips": 1,
+        "flips_closer_to_threshold_than_diff": true,
+        "confusion_matrix": {
+          "tn": 1327,
+          "fp": 85,
+          "fn": 61,
+          "tp": 644
+        },
+        "run_report_confusion_matrix": {
+          "tn": 1328,
+          "fp": 84,
+          "fn": 61,
+          "tp": 644
+        },
+        "eval_report_confusion_matrix": {
+          "tn": 1327,
+          "fp": 85,
+          "fn": 61,
+          "tp": 644
+        },
+        "ok": true
+      },
+      "test": {
+        "max_abs_diff": 0.001919,
+        "atol": 0.01,
+        "decision_flips": 0,
+        "flips_closer_to_threshold_than_diff": true,
+        "confusion_matrix": {
+          "tn": 1337,
+          "fp": 75,
+          "fn": 79,
+          "tp": 626
+        },
+        "run_report_confusion_matrix": {
+          "tn": 1337,
+          "fp": 75,
+          "fn": 79,
+          "tp": 626
+        },
+        "eval_report_confusion_matrix": {
+          "tn": 1337,
+          "fp": 75,
+          "fn": 79,
+          "tp": 626
+        },
+        "ok": true
+      }
+    },
+    "cli": {
+      "source_rows": [
+        153092,
+        154103,
+        162028,
+        155633,
+        148777,
+        148782,
+        148785,
+        148786
+      ],
+      "texts": 8,
+      "max_abs_diff": 4.8e-05,
+      "atol": 0.0001,
+      "decisions_equal": true,
+      "ok": true
+    }
+  },
+  "ok": true
+}

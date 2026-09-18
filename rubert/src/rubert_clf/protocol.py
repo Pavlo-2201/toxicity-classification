@@ -8,12 +8,21 @@
 - Длинные тексты — тексты test/validation длиннее LONG_TOKENS токенов эталонного
   токенизатора rubert-tiny2: подмножество одно и то же для всех моделей.
 
-Чекпойнты не сохраняются: после каждой эпохи считаются вероятности validation, калибровочной
-части и test, а эпоха выбирается по validation после обучения. Test в выборе не участвует.
+После каждой эпохи считаются вероятности validation, калибровочной части и test, а эпоха
+выбирается по validation после обучения. Test в выборе не участвует. Веса на диск не пишутся;
+с extra["keep_model"] веса лучшей по AP эпохи держатся в памяти, и возвращается модель именно
+этой эпохи — так итоговый артефакт совпадает с оценённым прогоном (train.py).
+
+У LoRA-кандидата CPU-инференс измеряется дважды: с адаптером, как обучали, и после слияния адаптера
+с весами (merge_and_unload) — так модель используется на практике. Для слитой модели записано и
+расхождение вероятностей test с несмёрженной.
 """
 
 from __future__ import annotations
 
+from rubert_clf.environment import capture
+
+import copy
 import time
 from dataclasses import asdict, dataclass, field
 
@@ -25,7 +34,7 @@ from sklearn.model_selection import train_test_split
 from torch import nn
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from rubert_clf import data
+from rubert_clf import data, model_source
 from rubert_clf.dataset import ToxicCommentsDataset, make_bucketed_dataloader, make_length_sorted_dataloader
 from rubert_clf.finetune import FinetuneConfig, amp_dtype, class_weights, make_optimizer, make_scaler, make_scheduler, \
     predict_proba, train_epoch
@@ -45,7 +54,9 @@ def calibration_split(train: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 def long_mask(texts, tokenizer=None) -> np.ndarray:
-    tokenizer = tokenizer or AutoTokenizer.from_pretrained(REFERENCE_TOKENIZER)
+    if tokenizer is None:
+        model_source.verify_registered(REFERENCE_TOKENIZER)
+        tokenizer = AutoTokenizer.from_pretrained(REFERENCE_TOKENIZER)
     from rubert_clf.text import normalize_texts
 
     lengths = [len(ids) for ids in tokenizer(normalize_texts(texts), truncation=False)["input_ids"]]
@@ -103,6 +114,8 @@ def run(spec: RunSpec, parts: dict[str, pd.DataFrame], device: torch.device, lon
         log=print) -> dict:
     """Обучение одной конфигурации с одним seed и оценка по протоколу."""
     set_seed(spec.seed)
+    # файлы зарегистрированной модели сверяются с ревизией до загрузки
+    pinned = model_source.verify_registered(spec.model_dir)
     tokenizer = AutoTokenizer.from_pretrained(spec.model_dir)
     config = spec.finetune_config()
     sets = {name: ToxicCommentsDataset(parts[name][data.TEXT_COL], parts[name][data.LABEL_COL], tokenizer,
@@ -121,7 +134,8 @@ def run(spec: RunSpec, parts: dict[str, pd.DataFrame], device: torch.device, lon
     if device.type == "cuda":
         torch.cuda.reset_peak_memory_stats(device)
 
-    epochs = []
+    epochs, best_state = [], None
+    keep_model = spec.extra.get("keep_model", False)
     for epoch in range(1, config.epochs + 1):
         loader.batch_sampler.set_epoch(epoch)
         stats = train_epoch(model, loader, optimizer, device, loss_fn=loss_fn, scheduler=scheduler, scaler=scaler,
@@ -136,26 +150,34 @@ def run(spec: RunSpec, parts: dict[str, pd.DataFrame], device: torch.device, lon
                "train_texts_per_second": round(len(sets["fit"]) / stats["seconds"], 1),
                "eval_seconds_3_splits": round(eval_seconds, 2), "validation": threshold_free(y_val, probs["validation"]),
                "probs": probs}
+        if keep_model and (not epochs or row["validation"]["average_precision"] > max(
+                e["validation"]["average_precision"] for e in epochs)):
+            best_state = {k: v.detach().to("cpu", copy=True) for k, v in model.state_dict().items()}
         epochs.append(row)
         log(f"{spec.name} seed {spec.seed} epoch {epoch}: loss {row['train_loss']} val AP {row['validation']['average_precision']} "
             f"logloss {row['validation']['log_loss']} ({row['train_seconds']} c)")
 
-    if spec.extra.get("use_last_epoch"):
-        # итоговая модель: число эпох уже выбрано протоколом, весов других эпох нет
-        best = epochs[-1]
-    else:
-        best = max(epochs, key=lambda r: (r["validation"]["average_precision"], -r["epoch"]))
+    # при равном AP — более ранняя эпоха; то же правило, что при сохранении best_state выше
+    best = max(epochs, key=lambda r: (r["validation"]["average_precision"], -r["epoch"]))
+    if keep_model:
+        model.load_state_dict(best_state)
+        # веса выбранной эпохи восстановлены: вероятности validation должны совпасть с посчитанными на ней
+        loader_val, order_val = eval_loaders["validation"]
+        restored, _ = predict_proba(model, loader_val, device, order_val, dtype)
+        if not np.allclose(restored, best["probs"]["validation"], atol=1e-4):
+            raise RuntimeError("Восстановленные веса лучшей эпохи не воспроизводят её вероятности на validation")
     y = {name: np.asarray(sets[name].labels) for name in ("calibration", "validation", "test")}
     threshold, calib_f1 = best_f1_threshold(y["calibration"], best["probs"]["calibration"])
     result = {
+        "environment": capture(neural=True),
         "spec": asdict(spec),
+        "base_model": pinned.pinned if pinned else f"не из реестра: {spec.model_dir}",
         "parameters": {"trainable": int(trainable), "total": int(total)},
         "device": str(device),
         "gpu_peak_memory_mb": round(torch.cuda.max_memory_allocated(device) / 2**20) if device.type == "cuda" else None,
         "truncated_share": {name: round(ds.truncated_share, 4) for name, ds in sets.items()},
         "selected_epoch": best["epoch"],
-        "selection_rule": ("последняя эпоха; число эпох выбрано протоколом" if spec.extra.get("use_last_epoch")
-                           else "максимум AP на validation (порог не участвует)"),
+        "selection_rule": "максимум AP на validation (порог не участвует)",
         "threshold": float(threshold),
         "threshold_rule": "максимум F1 токсичного класса на калибровочной части train",
         "calibration_f1_at_threshold": round(float(calib_f1), 4),
@@ -168,7 +190,10 @@ def run(spec: RunSpec, parts: dict[str, pd.DataFrame], device: torch.device, lon
     result["inference"] = measure_inference(model, tokenizer, test_texts, spec, device, dtype)
     if spec.extra.get("measure_cpu") and device.type != "cpu":
         cpu = torch.device("cpu")
-        result["inference_cpu"] = measure_inference(model.to(cpu).float(), tokenizer, test_texts, spec, cpu, None)
+        result["inference_cpu"], probs_cpu = measure_inference(model.to(cpu).float(), tokenizer, test_texts, spec, cpu,
+                                                               None, return_probs=True)
+        if spec.lora:  # копия: возвращаемая модель остаётся с адаптером, его и сохраняет train.py
+            result["inference_cpu_merged"] = measure_merged(model, tokenizer, test_texts, spec, probs_cpu, threshold)
     if spec.extra.get("keep_model"):
         result["model"], result["tokenizer"] = model, tokenizer
         return result
@@ -178,8 +203,21 @@ def run(spec: RunSpec, parts: dict[str, pd.DataFrame], device: torch.device, lon
     return result
 
 
+def measure_merged(model, tokenizer, texts: list[str], spec: RunSpec, probs_unmerged: np.ndarray, threshold: float) -> dict:
+    """LoRA после слияния с весами на CPU: задержка и совпадение с моделью с адаптером."""
+    merged = copy.deepcopy(model).merge_and_unload()
+    cpu = torch.device("cpu")
+    stats, probs = measure_inference(merged, tokenizer, texts, spec, cpu, None, return_probs=True)
+    stats.update({"parameters": int(sum(p.numel() for p in merged.parameters())),
+                  "test_max_abs_diff_vs_adapter": round(float(np.abs(probs - probs_unmerged).max()), 7),
+                  "test_decision_flips_vs_adapter": int(((probs >= threshold) != (probs_unmerged >= threshold)).sum())})
+    del merged
+    return stats
+
+
 @torch.no_grad()
-def measure_inference(model, tokenizer, texts: list[str], spec: RunSpec, device, dtype, n_single: int = 200) -> dict:
+def measure_inference(model, tokenizer, texts: list[str], spec: RunSpec, device, dtype, n_single: int = 200,
+                      return_probs: bool = False):
     """Пакетный инференс всего test на устройстве обучения и по одному тексту (n_single текстов)."""
     model.eval()
     ds = ToxicCommentsDataset(texts, None, tokenizer, spec.max_length, spec.truncation)
@@ -187,7 +225,7 @@ def measure_inference(model, tokenizer, texts: list[str], spec: RunSpec, device,
     if device.type == "cuda":
         torch.cuda.synchronize()
     started = time.perf_counter()
-    predict_proba(model, loader, device, order, dtype)
+    probs, _ = predict_proba(model, loader, device, order, dtype)
     if device.type == "cuda":
         torch.cuda.synchronize()
     batch_seconds = time.perf_counter() - started
@@ -204,7 +242,8 @@ def measure_inference(model, tokenizer, texts: list[str], spec: RunSpec, device,
             torch.cuda.synchronize()
         single.append((time.perf_counter() - t) * 1000)
     single.sort()
-    return {"device": str(device), "batch_ms_per_1000_texts": round(1000 * batch_seconds / len(texts) * 1000, 1),
-            "single_text_ms_p50": round(single[len(single) // 2], 2),
-            "single_text_ms_p95": round(single[int(len(single) * 0.95) - 1], 2), "single_texts": len(single),
-            "note": "одиночный текст: только прямой проход модели, без токенизации"}
+    stats = {"device": str(device), "batch_ms_per_1000_texts": round(1000 * batch_seconds / len(texts) * 1000, 1),
+             "single_text_ms_p50": round(single[len(single) // 2], 2),
+             "single_text_ms_p95": round(single[int(len(single) * 0.95) - 1], 2), "single_texts": len(single),
+             "note": "одиночный текст: только прямой проход модели, без токенизации"}
+    return (stats, probs) if return_probs else stats

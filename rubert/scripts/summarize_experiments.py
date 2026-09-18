@@ -1,19 +1,23 @@
 """Сводка экспериментов: среднее и разброс по seed, выбор по правилу протокола, сравнение с TF-IDF.
 
-Читает experiments/runs/runs/*.json, пишет experiments/runs/summary.json, experiments/runs/summary.md и анализ ошибок
-итоговой конфигурации на test (experiments/runs/error_groups_test.json, без текстов).
+Читает <каталог>/runs/*.json, пишет в тот же каталог summary.json, summary.md и анализ ошибок
+итоговой конфигурации на test (error_groups_test.json, без текстов). Каталог по умолчанию —
+опубликованные результаты experiments/runs; для нового запуска — --run-dir experiments/runs/<id>: такой
+каталог сначала проверяется (scripts/check_experiment_run.py), неполный запуск не сводится.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from collections import defaultdict
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
 
-from rubert_clf import data, splits
+from rubert_clf import data, experiment_run as er, splits
 from rubert_clf.cli import use_utf8_stdio
 from rubert_clf.errors import categorize, oov_share, rates_by_group, train_vocabulary
 from rubert_clf.finetune import write_json
@@ -21,8 +25,7 @@ from rubert_clf.metrics import classification_metrics, mcnemar, paired_bootstrap
 from rubert_clf.protocol import long_mask
 
 ROOT = data.PROJECT_ROOT
-RUNS = ROOT / "experiments" / "runs" / "runs"
-OUT = ROOT / "experiments" / "runs"
+PUBLISHED = ROOT / "experiments" / "runs"
 PROTOCOL = ROOT / "configs" / "protocol.json"
 CLASSICAL = ROOT / "reference" / "classical" / "test_predictions.csv"
 
@@ -55,8 +58,18 @@ def summarize_candidate(runs: list[dict]) -> dict:
         "gpu_batch_ms_per_1000": stat(g(lambda r: r["inference"]["batch_ms_per_1000_texts"])),
         "cpu_single_text_ms_p50": next((r["inference_cpu"]["single_text_ms_p50"] for r in runs if "inference_cpu" in r), None),
         "cpu_batch_ms_per_1000": next((r["inference_cpu"]["batch_ms_per_1000_texts"] for r in runs if "inference_cpu" in r), None),
+        # LoRA после слияния адаптера с весами (protocol.measure_merged); в выборе не участвует
+        "cpu_single_text_ms_p50_merged": next((r["inference_cpu_merged"]["single_text_ms_p50"] for r in runs
+                                               if "inference_cpu_merged" in r), None),
+        "cpu_batch_ms_per_1000_merged": next((r["inference_cpu_merged"]["batch_ms_per_1000_texts"] for r in runs
+                                              if "inference_cpu_merged" in r), None),
         "truncated_share_test": first["truncated_share"]["test"],
     }
+
+
+def cpu_cell(s: dict) -> str:
+    merged = s.get("cpu_single_text_ms_p50_merged")
+    return f"{s['cpu_single_text_ms_p50']}" + (f" (после слияния {merged})" if merged is not None else "")
 
 
 def select(summary: dict) -> dict:
@@ -73,10 +86,20 @@ def select(summary: dict) -> dict:
 
 def main() -> None:
     use_utf8_stdio()
-    protocol = json.loads(PROTOCOL.read_text(encoding="utf-8"))
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--run-dir", type=Path, default=PUBLISHED, help="каталог с runs/ (по умолчанию experiments/runs)")
+    args = parser.parse_args()
+    out = args.run_dir
+    protocol_path = PROTOCOL
+    if (out / er.MANIFEST).exists():  # каталог experiments.py: только полный согласованный запуск
+        problems = er.verify(out)
+        if problems:
+            raise SystemExit("Запуск не прошёл проверку:\n  " + "\n  ".join(problems))
+        protocol_path = ROOT / er.read_json(out / er.MANIFEST)["fingerprint"]["protocol"]["path"]
+    protocol = json.loads(protocol_path.read_text(encoding="utf-8"))
     runs = defaultdict(list)
     ready = {}
-    for path in sorted(RUNS.glob("*.json")):
+    for path in sorted((out / er.RUNS).glob("*.json")):
         r = json.loads(path.read_text(encoding="utf-8"))
         if path.name.startswith("ready__"):
             ready[r["spec"]["name"]] = r
@@ -121,12 +144,12 @@ def main() -> None:
     groups = {"all": np.ones(len(test), bool), "long_texts": long, **{c: cats[c].to_numpy() for c in cats.columns}}
     error_groups = rates_by_group(groups, y, {"tfidf_linearsvc": tfidf_pred, f"{chosen}_majority_of_seeds": majority})
     unstable = int(((votes > 0) & (votes < 1)).sum())
-    write_json(OUT / "error_groups_test.json", {"model": chosen, "split": "test", "by_group": error_groups,
+    write_json(out / "error_groups_test.json", {"model": chosen, "split": "test", "by_group": error_groups,
                                                "texts_with_seed_disagreement": unstable,
                                                "note": "решение итоговой конфигурации — большинство по seed"})
     pd.DataFrame({data.ID_COL: test[data.ID_COL], data.LABEL_COL: y, "tfidf_pred": tfidf_pred,
                   "rubert_vote_share": votes.round(3), "rubert_majority_pred": majority, "long_text": long,
-                  **{c: cats[c].to_numpy() for c in cats.columns}}).to_csv(OUT / "test_predictions.csv", index=False,
+                  **{c: cats[c].to_numpy() for c in cats.columns}}).to_csv(out / "test_predictions.csv", index=False,
                                                                            lineterminator="\n")
 
     report = {"candidates": summary, "selection": selection, "tfidf_baseline": tfidf,
@@ -137,7 +160,7 @@ def main() -> None:
                                         "contamination": r["contamination"], "training_data": r["spec"]["training_data"]}
                                     for n, r in ready.items()},
               "chosen_vs_tfidf": comparisons, "seed_vs_bootstrap": seed_vs_bootstrap}
-    write_json(OUT / "summary.json", report)
+    write_json(out / "summary.json", report)
 
     f = lambda s: f"{s['mean']:.3f} ± {s['std']:.3f}"
     lines = ["| конфигурация | val AP | test AP | test F1 @0.5 | test F1 @порог калибровки | test AP длинные | CPU мс/текст | GPU с/эпоха | обучаемых параметров |",
@@ -145,13 +168,13 @@ def main() -> None:
     for n, s in summary.items():
         mark = " **(выбор)**" if n == chosen else ""
         lines.append(f"| `{n}`{mark} | {f(s['validation_ap'])} | {f(s['test_ap'])} | {f(s['test_f1_at_0.5'])} | "
-                     f"{f(s['test_f1_at_calibrated_threshold'])} | {f(s['test_long_ap'])} | {s['cpu_single_text_ms_p50']} | "
+                     f"{f(s['test_f1_at_calibrated_threshold'])} | {f(s['test_long_ap'])} | {cpu_cell(s)} | "
                      f"{s['train_seconds_per_epoch_gpu']['mean']:.1f} | {s['trainable_parameters'] / 1e6:.1f} M |")
     lines.append(f"| TF-IDF + LinearSVC | — | {tfidf['test_ap']:.3f} | — | {tfidf['test_f1_at_tuned_threshold']:.3f} | {tfidf['test_long_ap']:.3f} | | | |")
     for n, r in report["ready_classifiers"].items():
         lines.append(f"| `{n}` (видел данные задачи или ok.ru) | — | {r['test_ap']:.3f} | {r['test_f1_at_0.5']:.3f} | "
                      f"{r['test_f1_at_calibrated_threshold']:.3f} | {r['test_long_ap']} | | | |")
-    (OUT / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
+    (out / "summary.md").write_text("\n".join(lines) + "\n", encoding="utf-8", newline="\n")
     print("\n".join(lines))
     print(json.dumps(selection, ensure_ascii=False))
     print(json.dumps(seed_vs_bootstrap, ensure_ascii=False))

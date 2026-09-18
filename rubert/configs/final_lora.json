@@ -1,0 +1,7 @@
+{
+  "description": "LoRA-кандидат протокола AP на validation, порог на калибровочной части train (docs/experiments.md) как воспроизводимый эксперимент: прогон base_L128_lora с seed 42 ровно как в экспериментах. Сохраняется адаптер эпохи с максимальным AP на validation (с обученной головой классификатора), порог — по калибровочной части train. Базовая модель — ruBert-base из реестра src/rubert_clf/model_source.py. Отчёт прогона пишется в reports/final_runs/.",
+  "protocol": "configs/protocol.json",
+  "candidate": "base_L128_lora",
+  "seed": 42,
+  "output_dir": "models/rubert-toxic-lora"
+}

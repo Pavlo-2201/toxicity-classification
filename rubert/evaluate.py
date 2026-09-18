@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from rubert_clf.environment import capture
+
 import argparse
 import json
 import time
@@ -33,6 +35,7 @@ def main() -> None:
     seconds = time.perf_counter() - start
     pred = (probs >= clf.threshold).astype(int)
     report = {
+        "environment": capture(neural=True),
         "model_dir": args.model_dir.name,
         "split": args.split,
         "n": len(df),
