@@ -15,7 +15,7 @@ REPORT = data.PROJECT_ROOT / "reports" / "split_check.json"
 def main() -> None:
     use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--classical-repo", type=Path, help="рабочая копия russian-text-classification (необязательно)")
+    parser.add_argument("--classical-repo", type=Path, help="каталог классического проекта, в этом репозитории ../classical (необязательно)")
     args = parser.parse_args()
 
     fingerprint = splits.load_fingerprint()

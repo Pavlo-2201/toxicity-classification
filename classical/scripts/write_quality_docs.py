@@ -189,7 +189,7 @@ F1 {ext['oracle_threshold_on_okru']['f1_toxic']}; это верхняя гран
 
 Для готовых нейросетевых классификаторов такая оценка нечестна:
 `cointegrated/rubert-tiny-toxicity` и `s-nlp/russian_toxicity_classifier` обучались в том числе на
-ok.ru (см. `rubert-text-classification`).
+ok.ru (см. `../rubert`).
 
 Попримерные результаты без текстов: `reports/external_okru_predictions.csv`, сводка —
 `reports/external_okru.json`.
