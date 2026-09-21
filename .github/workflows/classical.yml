@@ -1,4 +1,4 @@
-name: ci
+name: classical
 
 on:
   push:
@@ -9,22 +9,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-24.04, windows-latest]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: classical
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Line endings are LF in the index (hashes depend on bytes)
         shell: bash
         run: |
-          if git ls-files --eol | grep -E "^i/(crlf|mixed)"; then echo "CRLF in index"; exit 1; fi
-      - uses: actions/setup-python@v5
+          if git ls-files --eol -- :/ | grep -E "^i/(crlf|mixed)"; then echo "CRLF in index"; exit 1; fi
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13.12"
           cache: pip
+          cache-dependency-path: requirements/*.txt
       - name: Clean install
         run: |
-          python -m pip install -r requirements.txt
-          python -m pip install --no-deps -e .
+          python -m pip install -r ../requirements/classical.txt
+          python -m pip install --no-deps -e ..
       - name: Data (pinned commit, SHA-256 and content fingerprint are checked)
         run: python scripts/download_data.py
       - name: Tests (incl. UTF-8 CLI in pipe and file, cp1251 locale emulated)
