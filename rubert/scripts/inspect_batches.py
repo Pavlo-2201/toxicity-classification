@@ -9,10 +9,11 @@ import numpy as np
 import torch
 from transformers import AutoModel, AutoTokenizer
 
-from rubert_clf import data, model_source, splits
+from rubert_clf import data, model_source
 from rubert_clf.dataset import PaddingCollator, ToxicCommentsDataset, make_dataloader
-from rubert_clf.text import normalize_texts
-from rubert_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.stdio import use_utf8_stdio
+from toxic_core.text import normalize_texts
 
 REPORT = data.PROJECT_ROOT / "reports" / "tokenization.json"
 CANDIDATE_MAX_LENGTHS = (32, 64, 128, 256, 512)

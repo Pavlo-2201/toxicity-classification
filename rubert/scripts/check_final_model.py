@@ -19,7 +19,7 @@
 
 from __future__ import annotations
 
-from rubert_clf.environment import capture
+from toxic_core.environment import capture
 
 import argparse
 import json
@@ -32,13 +32,15 @@ import numpy as np
 import torch
 from transformers import AutoTokenizer
 
-from rubert_clf import data, model_source, splits
-from rubert_clf.cli import use_utf8_stdio
+from rubert_clf import data, model_source
 from rubert_clf.dataset import ToxicCommentsDataset, make_length_sorted_dataloader
 from rubert_clf.finetune import predict_proba, write_json
 from rubert_clf.inference import ToxicityClassifier, is_peft_model, weights_file
-from rubert_clf.metrics import classification_metrics
-from rubert_clf.text import normalize_texts
+from toxic_core import splits
+from toxic_core.metrics import classification_metrics
+from toxic_core.results import OutputExistsError, ensure_absent
+from toxic_core.stdio import use_utf8_stdio
+from toxic_core.text import normalize_texts
 
 RUN_ATOL = 1e-4  # вероятности отчёта округлены до 5 знаков
 FLOAT32_ATOL = 1e-2  # float32 против float16 прогона: заведомо больше ожидаемых ~1e-3
@@ -70,7 +72,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--model-dir", type=Path, default=data.PROJECT_ROOT / "models" / "rubert-toxic")
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--overwrite", action="store_true", help="заменить существующий отчёт проверки")
     args = parser.parse_args()
+    out_path = data.PROJECT_ROOT / "reports" / "eval" / f"{args.model_dir.name}_check.json"
+    try:
+        ensure_absent([out_path], args.overwrite)
+    except OutputExistsError as error:
+        raise SystemExit(str(error)) from error
 
     # пункт 1: ошибка, если не совпало; LoRA сливается только после проверки в условиях прогона
     clf = ToxicityClassifier.load(args.model_dir, args.device, merge=False)
@@ -146,7 +154,6 @@ def main() -> None:
     result = {"environment": capture(neural=True), "model_dir": data.project_relative(args.model_dir), "run_report": clf.selection["run"]["report"],
               "device": str(clf.device), "gpu": torch.cuda.get_device_name(0) if clf.device.type == "cuda" else None,
               "checks": checks, "ok": ok}
-    out_path = data.PROJECT_ROOT / "reports" / "eval" / f"{args.model_dir.name}_check.json"
     write_json(out_path, result)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     print(f"{'OK' if ok else 'РАСХОЖДЕНИЕ'}: {out_path}")

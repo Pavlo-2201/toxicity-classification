@@ -9,11 +9,12 @@ from pathlib import Path
 import torch
 from transformers import AutoTokenizer
 
-from rubert_clf import data, model_source, splits
+from rubert_clf import data, model_source
 from rubert_clf.dataset import ToxicCommentsDataset
 from rubert_clf.finetune import FinetuneConfig, build_model, fit, write_json
 from rubert_clf.runtime import get_device, set_seed
-from rubert_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.stdio import use_utf8_stdio
 
 SMOKE_SIZE = 256
 

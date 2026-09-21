@@ -10,7 +10,7 @@ import json
 import pandas as pd
 
 from toxic_clf import data
-from toxic_clf.cli import use_utf8_stdio
+from toxic_core.stdio import use_utf8_stdio
 
 ROOT = data.PROJECT_ROOT
 REPORTS = ROOT / "reports"

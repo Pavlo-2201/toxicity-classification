@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from toxic_clf.final_model import MODEL_PATH, load_calibrator, load_model, toxicity_scores
-from toxic_clf.cli import use_utf8_stdio
+from toxic_core.stdio import use_utf8_stdio
 
 
 def read_texts(path: Path, column: str) -> pd.DataFrame:

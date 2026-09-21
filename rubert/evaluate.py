@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
-from rubert_clf.environment import capture
+from toxic_core.environment import capture
 
 import argparse
 import json
 import time
 from pathlib import Path
 
-from rubert_clf import data, splits
+from rubert_clf import data
 from rubert_clf.finetune import write_json
 from rubert_clf.inference import ToxicityClassifier
-from rubert_clf.metrics import bootstrap_f1_ci, classification_metrics
-from rubert_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.metrics import bootstrap_f1_ci, classification_metrics
+from toxic_core.results import OutputExistsError, ensure_absent
+from toxic_core.stdio import use_utf8_stdio
 
 
 def main() -> None:
@@ -23,7 +25,13 @@ def main() -> None:
     parser.add_argument("--split", choices=splits.SPLITS, default="validation")
     parser.add_argument("--limit", type=int, help="оценить на первых N текстах разбиения (для проверки)")
     parser.add_argument("--device", default="auto")
+    parser.add_argument("--overwrite", action="store_true", help="заменить существующий отчёт")
     args = parser.parse_args()
+    out = data.PROJECT_ROOT / "reports" / "eval" / f"{args.model_dir.name}_{args.split}{'_limit' + str(args.limit) if args.limit else ''}.json"
+    try:
+        ensure_absent([out], args.overwrite)
+    except OutputExistsError as error:
+        raise SystemExit(str(error)) from error
 
     clf = ToxicityClassifier.load(args.model_dir, args.device)
     df = splits.load_splits()[args.split]
@@ -46,7 +54,6 @@ def main() -> None:
         "metrics": classification_metrics(y, pred, probs),
         "f1_bootstrap_ci": bootstrap_f1_ci(y, pred),
     }
-    out = data.PROJECT_ROOT / "reports" / "eval" / f"{args.model_dir.name}_{args.split}{'_limit' + str(args.limit) if args.limit else ''}.json"
     write_json(out, report)
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f"Сохранено: {out}")

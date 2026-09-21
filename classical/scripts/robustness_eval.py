@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 
-from toxic_clf.environment import capture
+from toxic_core.environment import capture
 
 import argparse
 import json
@@ -24,11 +24,12 @@ from pathlib import Path
 import numpy as np
 from sklearn.metrics import average_precision_score, f1_score
 
-from toxic_clf import data, splits
-from toxic_clf.cli import use_utf8_stdio
+from toxic_clf import data
 from toxic_clf.models import build_pipeline
 from toxic_clf.robustness import NORMALIZATIONS, PERTURBATIONS, perturb
 from toxic_clf.selection import best_f1_threshold, out_of_fold_scores
+from toxic_core import splits
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 SEED = 2026

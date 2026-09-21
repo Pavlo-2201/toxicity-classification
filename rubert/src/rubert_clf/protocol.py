@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from rubert_clf.environment import capture
+from toxic_core.environment import capture
 
 import copy
 import time
@@ -38,8 +38,8 @@ from rubert_clf import data, model_source
 from rubert_clf.dataset import ToxicCommentsDataset, make_bucketed_dataloader, make_length_sorted_dataloader
 from rubert_clf.finetune import FinetuneConfig, amp_dtype, class_weights, make_optimizer, make_scaler, make_scheduler, \
     predict_proba, train_epoch
-from rubert_clf.metrics import best_f1_threshold, classification_metrics
 from rubert_clf.runtime import set_seed
+from toxic_core.metrics import best_f1_threshold, classification_metrics
 
 CALIB_SHARE = 0.15
 CALIB_SEED = 42
@@ -57,7 +57,7 @@ def long_mask(texts, tokenizer=None) -> np.ndarray:
     if tokenizer is None:
         model_source.verify_registered(REFERENCE_TOKENIZER)
         tokenizer = AutoTokenizer.from_pretrained(REFERENCE_TOKENIZER)
-    from rubert_clf.text import normalize_texts
+    from toxic_core.text import normalize_texts
 
     lengths = [len(ids) for ids in tokenizer(normalize_texts(texts), truncation=False)["input_ids"]]
     return np.asarray(lengths) > LONG_TOKENS

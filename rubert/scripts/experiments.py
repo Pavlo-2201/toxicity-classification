@@ -8,7 +8,7 @@
 сессии), splits.json и runs/<кандидат>__s<seed>.json. Продолжение — явный режим: протокол, данные,
 ревизии моделей и код должны совпасть с манифестом, пропускаются только прогоны этого же запуска
 (src/rubert_clf/experiment_run.py). Проверка готового запуска — scripts/check_experiment_run.py, сводка —
-scripts/summarize_experiments.py --run-dir КАТАЛОГ. Опубликованные результаты в experiments/runs скрипт не меняет.
+scripts/summarize_experiments.py --run-dir КАТАЛОГ. Все результаты остаются в явно выбранном каталоге запуска.
 """
 
 from __future__ import annotations
@@ -22,13 +22,14 @@ import numpy as np
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-from rubert_clf import data, experiment_run as er, model_source, splits
-from rubert_clf.cli import use_utf8_stdio
+from rubert_clf import data, experiment_run as er, model_source
 from rubert_clf.finetune import write_json
-from rubert_clf.metrics import best_f1_threshold
 from rubert_clf.protocol import RunSpec, calibration_split, evaluate_split, long_mask, run, threshold_free
 from rubert_clf.runtime import get_device
-from rubert_clf.text import normalize_texts
+from toxic_core import splits
+from toxic_core.metrics import best_f1_threshold
+from toxic_core.stdio import use_utf8_stdio
+from toxic_core.text import normalize_texts
 
 PROTOCOL = data.PROJECT_ROOT / "configs" / "protocol.json"
 

@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 
-from rubert_clf import data, splits
+from rubert_clf import data
 from rubert_clf.errors import categorize, oov_share, train_vocabulary
-from rubert_clf.metrics import mcnemar, paired_bootstrap_f1_diff
 from rubert_clf.tfidf_baseline import CLASSICAL_DIR
+from toxic_core import splits
+from toxic_core.metrics import mcnemar, paired_bootstrap_f1_diff
 
 
 def test_mcnemar_counts_discordant_pairs():

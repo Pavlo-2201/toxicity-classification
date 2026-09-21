@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
-from toxic_clf.environment import capture
+from toxic_core.environment import capture
 
 import json
 import re
 
 import pandas as pd
 
-from toxic_clf import data, splits
+from toxic_clf import data
 from toxic_clf.errors import categorize
 from toxic_clf.models import build_pipeline
-from toxic_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 # версии с текстами комментариев: только локально (данные под GPL-2.0, в репозиторий не публикуются)

@@ -10,7 +10,8 @@ from sklearn.svm import LinearSVC
 from sklearn.preprocessing import FunctionTransformer
 
 from toxic_clf.robustness import Normalizer
-from toxic_clf.text import normalize_texts, strip_punctuation_texts
+from toxic_clf.text import strip_punctuation_texts
+from toxic_core.text import normalize_texts
 
 SEED = 42
 

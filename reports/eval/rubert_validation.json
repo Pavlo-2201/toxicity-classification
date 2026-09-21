@@ -1,0 +1,71 @@
+{
+  "format": "toxic-eval/1",
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8",
+    "torch": "2.8.0+cu128",
+    "transformers": "4.57.6",
+    "tokenizers": "0.22.2",
+    "huggingface_hub": "0.36.0",
+    "safetensors": "0.6.2",
+    "peft": "0.17.1",
+    "accelerate": "1.10.1"
+  },
+  "model": "rubert",
+  "split": "validation",
+  "n": 2117,
+  "limit": null,
+  "data": {
+    "split_manifest_sha256": "a5c21437095942fde727b0775624660d0d083cd411348594c449305a704b23de",
+    "dataset_fingerprint": "5cce7860d064da67a4cf680b5b33fb0e7b2b92aed04029dda99f56fa68289b0f"
+  },
+  "artifact": {
+    "path": "rubert/models/rubert-toxic",
+    "weights": "model.safetensors",
+    "weights_sha256": "380a629bafe60c8f1d561e9115fea1ef0817e4c139bb2d6ab67c9f7660d89ff7",
+    "base_model": "ai-forever/ruBert-base@05f37a2ca9e333fd18f30cd0c96c68d274793c69",
+    "epoch": 2,
+    "max_length": 128,
+    "truncation": "head",
+    "run_report": "reports/final_runs/base_L128__s42.json"
+  },
+  "threshold": 0.13083970546722412,
+  "score": "P(toxic), softmax",
+  "probability": "P(toxic), softmax",
+  "protocol": {
+    "protocol": "AP на validation, порог на калибровочной части train (docs/experiments.md)",
+    "epoch_selection": "максимум AP на validation (порог не участвует)",
+    "threshold": "максимум F1 токсичного класса на калибровочной части train",
+    "test_used_for_selection": false
+  },
+  "metrics": {
+    "f1_toxic": 0.8982,
+    "macro_f1": 0.923,
+    "precision_toxic": 0.8834,
+    "recall_toxic": 0.9135,
+    "accuracy": 0.931,
+    "predicted_toxic_share": 0.3444,
+    "roc_auc": 0.976,
+    "average_precision": 0.9558,
+    "confusion_matrix": {
+      "tn": 1327,
+      "fp": 85,
+      "fn": 61,
+      "tp": 644
+    }
+  },
+  "f1_bootstrap_ci": {
+    "level": 0.95,
+    "n_resamples": 1000,
+    "seed": 42,
+    "low": 0.8799,
+    "high": 0.9146
+  },
+  "predictions_file": "rubert_validation_predictions.csv",
+  "predictions_sha256": "ceb6eeea1c6f87a94791b60bbc1400ee40c571882e719dde2de1e61b2c9d0dfb"
+}

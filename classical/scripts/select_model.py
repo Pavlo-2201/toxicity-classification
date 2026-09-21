@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from toxic_clf.environment import capture
+from toxic_core.environment import capture
 
 import argparse
 import json
@@ -13,12 +13,13 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from sklearn.metrics import ConfusionMatrixDisplay
 
-from toxic_clf import data, splits
+from toxic_clf import data
 from toxic_clf.experiments import save_results
-from toxic_clf.metrics import classification_metrics
 from toxic_clf.models import build_pipeline
 from toxic_clf.selection import best_f1_threshold, cross_validate_config, out_of_fold_scores, response_method
-from toxic_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.metrics import classification_metrics
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 BEST_CONFIG_PATH = REPORTS / "best_model.json"

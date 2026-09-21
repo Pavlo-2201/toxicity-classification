@@ -47,3 +47,18 @@ def test_keep_model_returns_weights_of_the_selected_epoch(tokenizer, monkeypatch
     loader, order = make_length_sorted_dataloader(ds, tokenizer, 8)
     probs, _ = predict_proba(model, loader, CPU, order)
     np.testing.assert_allclose(probs, result["predictions"]["validation"], atol=1e-5)
+
+
+def test_test_split_does_not_affect_epoch_or_threshold(tokenizer):
+    """Эпоха — по validation, порог — по калибровочной части: перевёрнутые метки test ничего из этого не меняют."""
+    df = toy_parts()["fit"]
+    parts = {"fit": df, "calibration": df, "validation": df, "test": df}
+    flipped = {**parts, "test": df.assign(**{data.LABEL_COL: 1 - df[data.LABEL_COL]})}
+    spec = protocol.RunSpec(name="toy", model_dir=str(model_source.MODEL_DIR), max_length=32, lr=5e-4, epochs=2,
+                            batch_size=4, eval_batch_size=8, seed=0)
+    a = protocol.run(spec, parts, CPU, {}, log=lambda *_: None)
+    b = protocol.run(spec, flipped, CPU, {}, log=lambda *_: None)
+    assert a["selected_epoch"] == b["selected_epoch"] and a["threshold"] == b["threshold"]
+    assert [e["validation"] for e in a["epochs"]] == [e["validation"] for e in b["epochs"]]
+    np.testing.assert_array_equal(a["predictions"]["validation"], b["predictions"]["validation"])
+    assert a["test"]["at_calibrated_threshold"] != b["test"]["at_calibrated_threshold"]  # test действительно другой

@@ -5,7 +5,7 @@ from pathlib import Path
 
 SRC = Path(__file__).resolve().parents[1] / "src"
 TEXT = "ёжик 😀 naïve — «кавычки»"
-CODE = f"from toxic_clf.cli import use_utf8_stdio; use_utf8_stdio(); print(input()); print({TEXT!r})"
+CODE = f"from toxic_core.stdio import use_utf8_stdio; use_utf8_stdio(); print(input()); print({TEXT!r})"
 # кодировка локали как у Windows с русской раскладкой: без исправления печать эмодзи падает
 ENV = {**os.environ, "PYTHONPATH": str(SRC), "PYTHONIOENCODING": "cp1251", "PYTHONUTF8": "0"}
 

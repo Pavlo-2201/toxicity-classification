@@ -14,15 +14,16 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from transformers import AutoModel, AutoModelForSequenceClassification, AutoTokenizer
 
-from rubert_clf import data, model_source, splits
+from rubert_clf import data, model_source
 from rubert_clf.dataset import ToxicCommentsDataset, make_length_sorted_dataloader
 from rubert_clf.embeddings import extract_embeddings
 from rubert_clf.errors import categorize, oov_share, rates_by_group, train_vocabulary
 from rubert_clf.finetune import predict_proba, write_json
-from rubert_clf.metrics import bootstrap_f1_ci, classification_metrics, mcnemar, paired_bootstrap_f1_diff
 from rubert_clf.runtime import get_device, set_seed
 from rubert_clf.tfidf_baseline import CLASSICAL_DIR, build_classical_baseline
-from rubert_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.metrics import bootstrap_f1_ci, classification_metrics, mcnemar, paired_bootstrap_f1_diff
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 STAGE3 = REPORTS / "experiments" / "stage3_frozen_encoder.json"

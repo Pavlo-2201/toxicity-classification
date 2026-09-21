@@ -13,10 +13,11 @@ import json
 import numpy as np
 import pandas as pd
 
-from rubert_clf import data, splits
-from rubert_clf.cli import use_utf8_stdio
+from rubert_clf import data
 from rubert_clf.errors import categorize, oov_share, rates_by_group, train_vocabulary
 from rubert_clf.finetune import write_json
+from toxic_core import splits
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 PREDICTIONS = REPORTS / "validation_predictions_all.csv"

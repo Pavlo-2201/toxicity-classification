@@ -7,8 +7,8 @@ from transformers import AutoModelForSequenceClassification
 from rubert_clf import model_source
 from rubert_clf.dataset import ToxicCommentsDataset, make_length_sorted_dataloader
 from rubert_clf.finetune import FinetuneConfig, build_model, class_weights, fit, predict_proba
-from rubert_clf.metrics import best_f1_threshold
 from rubert_clf.runtime import set_seed
+from toxic_core.metrics import best_f1_threshold
 
 CPU = torch.device("cpu")
 TEXTS = ["Ты дурак!", "Спасибо, очень полезно.", "Иди отсюда, урод", "Хорошего дня всем", "Заткнись", "Интересная статья",

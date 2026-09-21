@@ -1,0 +1,92 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  # Классическая часть и общее ядро ставятся без PyTorch: так проверяется лёгкая установка.
+  classical:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - name: Line endings are LF in the index (hashes depend on bytes)
+        run: |
+          if git ls-files --eol -- :/ | grep -E "^i/(crlf|mixed)"; then echo "CRLF in index"; exit 1; fi
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13.12"
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+      - name: Install without PyTorch
+        run: |
+          python -m pip install -r requirements/classical.txt
+          python -m pip install --no-deps -e .
+          python -c "import importlib.util, sys; sys.exit(importlib.util.find_spec('torch') is not None)"
+      - name: Data (pinned commit, SHA-256, content fingerprint, rebuilt split manifest)
+        run: toxic prepare
+      - name: Tests (rubert/tests are not collected without torch)
+        run: python -m pytest
+      - name: Train and predict through a pipe
+        run: |
+          toxic train classical --overwrite
+          toxic predict classical --text "Спасибо, полезно 😀" | tee predictions.csv
+          python -c "import pathlib; t = pathlib.Path('predictions.csv').read_text(encoding='utf-8'); assert '😀' in t"
+      - name: Normalization "all" as a separate artifact, user-given paths
+        run: |
+          toxic train classical --normalization all --output "$RUNNER_TEMP/m/all.joblib" --reports-dir "$RUNNER_TEMP/r/all"
+          toxic predict classical --artifact "$RUNNER_TEMP/m/all.joblib" --text "ты тупoй идиoт" --output "$RUNNER_TEMP/all_pred.csv"
+          python classical/scripts/external_eval.py --model "$RUNNER_TEMP/m/all.joblib" --reports-dir "$RUNNER_TEMP/r/all" > /dev/null
+          test -s "$RUNNER_TEMP/r/all/external_okru.json"
+      - name: Retraining reproduces committed reports byte for byte
+        run: |
+          toxic train classical --normalization all --overwrite
+          git diff --exit-code -- classical/reports/final_metrics.json classical/reports/test_predictions.csv classical/reports/normalization_all/final_metrics.json classical/reports/normalization_all/test_predictions.csv
+      - name: Common-format evaluation reproduces committed reports/eval and refuses to overwrite
+        run: |
+          toxic evaluate classical --split validation
+          toxic evaluate classical --split test
+          git diff --exit-code -- reports/eval
+          if toxic train classical; then echo "train overwrote existing artifact"; exit 1; fi
+      - name: Consistency of data, splits, reports and artifacts
+        run: toxic check > /dev/null
+
+  rubert:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13.12"
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+      - name: Install with RuBERT dependencies (CPU torch)
+        run: |
+          python -m pip install "torch==2.8.0" --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -r requirements/rubert.txt
+          python -m pip install --no-deps -e .
+          python -c "import torch, transformers, peft"
+      - uses: actions/cache@v5
+        with:
+          path: rubert/models/rubert-tiny2
+          key: rubert-tiny2-e8ed3b0c8bbf4fb6984c3de043bf7d2f4e5969ae
+      - name: Data and pinned model revision (hashes are checked)
+        run: toxic prepare rubert
+      - name: Tests (all parts; RuBERT smoke training on CPU through the common CLI)
+        run: python -m pytest
+      - name: Consistency of data, splits, reports and artifacts
+        run: toxic check > /dev/null

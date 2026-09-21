@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset, Sampler, Subset
 
-from rubert_clf.text import normalize_texts
+from toxic_core.text import normalize_texts
 
 
 def head_tail_ids(tokenizer, ids: list[int], max_length: int, head_share: float = 0.5) -> list[int]:

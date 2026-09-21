@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from toxic_clf.environment import capture
+from toxic_core.environment import capture
 
 import json
 
@@ -12,8 +12,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from toxic_clf import data, splits
-from toxic_clf.cli import use_utf8_stdio
+from toxic_clf import data
+from toxic_core import splits
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 

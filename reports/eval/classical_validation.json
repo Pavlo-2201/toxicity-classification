@@ -1,0 +1,66 @@
+{
+  "format": "toxic-eval/1",
+  "environment": {
+    "python": "3.13.12",
+    "numpy": "2.4.1",
+    "scipy": "1.17.1",
+    "pandas": "3.0.0",
+    "sklearn": "1.8.0",
+    "joblib": "1.5.3",
+    "matplotlib": "3.10.8"
+  },
+  "model": "classical",
+  "split": "validation",
+  "n": 2117,
+  "limit": null,
+  "data": {
+    "split_manifest_sha256": "a5c21437095942fde727b0775624660d0d083cd411348594c449305a704b23de",
+    "dataset_fingerprint": "5cce7860d064da67a4cf680b5b33fb0e7b2b92aed04029dda99f56fa68289b0f"
+  },
+  "artifact": {
+    "path": "classical/models/toxic_clf.joblib",
+    "config": "charwb25_linearsvc_C0.3_balanced",
+    "normalization": "baseline",
+    "sklearn": "1.8.0"
+  },
+  "threshold": -0.085671,
+  "score": "decision_function LinearSVC (margin, не вероятность)",
+  "probability": "Platt на OOF margin train (5-fold)",
+  "protocol": {
+    "model_selection": "5-fold CV на train (classical/reports/best_model.json)",
+    "threshold": "F1-оптимум по OOF-оценкам train (5-fold); принимается, если F1 на validation не ниже, чем при пороге по умолчанию",
+    "test_used_for_selection": false,
+    "threshold_selection": {
+      "default": 0.0,
+      "oof_tuned": -0.085671,
+      "oof_f1_toxic": 0.8722,
+      "used": -0.085671,
+      "rule": "подобранный порог принимается, если F1 на validation не ниже, чем со стандартным"
+    }
+  },
+  "metrics": {
+    "f1_toxic": 0.867,
+    "macro_f1": 0.8991,
+    "precision_toxic": 0.8471,
+    "recall_toxic": 0.8879,
+    "accuracy": 0.9093,
+    "predicted_toxic_share": 0.3491,
+    "roc_auc": 0.9648,
+    "average_precision": 0.931,
+    "confusion_matrix": {
+      "tn": 1299,
+      "fp": 113,
+      "fn": 79,
+      "tp": 626
+    }
+  },
+  "f1_bootstrap_ci": {
+    "level": 0.95,
+    "n_resamples": 1000,
+    "seed": 42,
+    "low": 0.8471,
+    "high": 0.8853
+  },
+  "predictions_file": "classical_validation_predictions.csv",
+  "predictions_sha256": "5f3f6a33c993f4c804c9e08f9d30ce1a5c79b645450eb43ada4d710d6d897e4c"
+}

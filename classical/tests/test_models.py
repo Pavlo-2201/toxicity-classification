@@ -1,8 +1,8 @@
 import numpy as np
 
-from toxic_clf.metrics import classification_metrics
 from toxic_clf.models import build_pipeline
-from toxic_clf.text import normalize_text
+from toxic_core.metrics import classification_metrics
+from toxic_core.text import normalize_text
 
 TOXIC = ["ты тупой идиот", "заткнись, дебил!!!", "иди нафиг, урод", "какой же ты идиот"]
 CLEAN = ["спасибо за статью", "хороший день сегодня", "интересная мысль, согласен", "поддерживаю автора"]
@@ -62,7 +62,7 @@ def test_word_char_union_and_punctuation_ablation():
 
 
 def test_bootstrap_ci_contains_point_estimate():
-    from toxic_clf.metrics import bootstrap_f1_ci
+    from toxic_core.metrics import bootstrap_f1_ci
 
     rng = np.random.default_rng(0)
     y = rng.integers(0, 2, 500)
@@ -71,3 +71,13 @@ def test_bootstrap_ci_contains_point_estimate():
     point = classification_metrics(y, pred)["f1_toxic"]
     assert ci["low"] <= point <= ci["high"]
     assert ci == bootstrap_f1_ci(y, pred, n_resamples=200)
+
+
+def test_artifacts_pickled_before_core_still_resolve_normalization():
+    """Артефакты, сохранённые до переноса нормализации в toxic_core, ссылаются на toxic_clf.text.normalize_texts."""
+    import pickle
+
+    from toxic_core.text import normalize_texts
+
+    old_reference = b"\n".join([b"ctoxic_clf.text", b"normalize_texts", b"."])  # pickle: GLOBAL модуль/имя, STOP
+    assert pickle.loads(old_reference) is normalize_texts

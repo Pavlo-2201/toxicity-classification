@@ -26,5 +26,16 @@ build/
 .vscode/
 reports/local/
 
-# каталоги запусков scripts/experiments.py (опубликованные результаты — experiments/runs)
+# локальные каталоги запусков scripts/experiments.py
 experiments/
+
+# Результаты прототипов и диагностика формируются локально.
+reports/experiments/
+reports/final_model/
+reports/tokenization.json
+reports/final_comparison.json
+reports/test_predictions_all.csv
+reports/validation_predictions_all.csv
+reports/error_analysis_rubert.json
+reports/error_examples_rubert.csv
+reports/eval/smoke_*.json

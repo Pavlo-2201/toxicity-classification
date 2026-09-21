@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from toxic_clf.environment import capture
+from toxic_core.environment import capture
 
 import argparse
 import json
@@ -19,11 +19,11 @@ from sklearn.metrics import average_precision_score, roc_auc_score
 
 from toxic_clf import data
 from toxic_clf.calibration import calibration_metrics
-from toxic_clf.cli import use_utf8_stdio
 from toxic_clf.external import OKRU, clean_external, download_okru, load_okru
+from toxic_core.stdio import use_utf8_stdio
 from toxic_clf.final_model import (MODEL_PATH, load_calibrator, load_metadata, load_model, reports_dir_for,
                                    toxicity_scores)
-from toxic_clf.metrics import bootstrap_f1_ci, classification_metrics
+from toxic_core.metrics import bootstrap_f1_ci, classification_metrics
 
 
 def display_path(path: Path) -> str:

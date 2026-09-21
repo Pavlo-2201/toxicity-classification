@@ -11,7 +11,7 @@ reports/label_audit_discrepancies.csv (расхождения с LLM, без т�
 
 from __future__ import annotations
 
-from toxic_clf.environment import capture
+from toxic_core.environment import capture
 
 import argparse
 import json
@@ -20,8 +20,8 @@ from pathlib import Path
 import pandas as pd
 
 from toxic_clf import data
-from toxic_clf.cli import use_utf8_stdio
-from toxic_clf.human_audit import AUDIT_PATH, FORM_PATH, HUMAN_PATH, compare, load_human, write_form
+from toxic_clf.human_audit import AUDIT_PATH, FORM_PATH, HUMAN_PATH, compare, load_human, wilson_interval, write_form
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 
@@ -41,9 +41,21 @@ def main() -> None:
         print(f"Форма: {write_form(args.output)}")
         return
 
-    summary, discrepancies = compare(pd.read_csv(AUDIT_PATH, keep_default_na=False), load_human(args.human))
+    audit = pd.read_csv(AUDIT_PATH, keep_default_na=False)
+    summary, discrepancies = compare(audit, load_human(args.human))
     summary["environment"] = capture()
     args.reports_dir.mkdir(parents=True, exist_ok=True)
+    audit_summary = {"environment": capture()}
+    for label, part in audit.groupby("toxic"):
+        n = len(part)
+        disagree = int((part["review"] == "disagree").sum())
+        audit_summary[f"label_{label}"] = {"n": n, "disagree": disagree,
+            "unclear": int((part["review"] == "unclear").sum()),
+            "disagree_share": round(disagree / n, 3), "wilson_95": wilson_interval(disagree, n)}
+    audit_summary["method"] = ("120 текстов train (по 60 каждой метки, seed 2026, без конфликтных дубликатов); "
+                               "прочитаны моделью LLM по определению: оскорбление, угроза, непристойность, ненависть к группе")
+    (args.reports_dir / "label_audit.json").write_text(
+        json.dumps(audit_summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     (args.reports_dir / "label_audit_human.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     discrepancies.to_csv(args.reports_dir / "label_audit_discrepancies.csv", index=False, lineterminator="\n")

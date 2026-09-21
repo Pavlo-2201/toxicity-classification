@@ -11,12 +11,13 @@ import numpy as np
 import pandas as pd
 from transformers import AutoTokenizer
 
-from rubert_clf import data, model_source, splits
+from rubert_clf import data, model_source
 from rubert_clf.dataset import ToxicCommentsDataset
 from rubert_clf.finetune import FinetuneConfig, build_model, fit, write_json
-from rubert_clf.metrics import classification_metrics
 from rubert_clf.runtime import get_device, set_seed
-from rubert_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.metrics import classification_metrics
+from toxic_core.stdio import use_utf8_stdio
 
 GRID_PATH = data.PROJECT_ROOT / "configs" / "stage6_experiments.json"
 BEST_CONFIG_PATH = data.PROJECT_ROOT / "configs" / "finetune_best.json"

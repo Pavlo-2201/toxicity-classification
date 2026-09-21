@@ -224,7 +224,7 @@ def fit(model, train_ds, val_ds, tokenizer, config: FinetuneConfig, device, chec
     """
     from rubert_clf.dataset import make_bucketed_dataloader, make_dataloader, make_length_sorted_dataloader
     from rubert_clf import model_source
-    from rubert_clf.metrics import best_f1_threshold, classification_metrics
+    from toxic_core.metrics import best_f1_threshold, classification_metrics
     from rubert_clf.runtime import set_seed
 
     set_seed(config.seed)

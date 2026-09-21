@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-from toxic_clf.environment import capture
+from toxic_core.environment import capture
 
 import json
-import platform
 import time
 from pathlib import Path
 
-import sklearn
 
-from toxic_clf import data, splits
-from toxic_clf.metrics import classification_metrics
+from toxic_clf import data
 from toxic_clf.models import build_pipeline, toxicity_scores
+from toxic_core import splits
+from toxic_core.metrics import classification_metrics
 
 EXPERIMENTS_DIR = data.PROJECT_ROOT / "reports" / "experiments"
 

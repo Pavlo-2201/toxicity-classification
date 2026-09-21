@@ -14,7 +14,7 @@ import argparse
 from pathlib import Path
 
 from rubert_clf import experiment_run as er
-from rubert_clf.cli import use_utf8_stdio
+from toxic_core.stdio import use_utf8_stdio
 
 
 def main() -> None:

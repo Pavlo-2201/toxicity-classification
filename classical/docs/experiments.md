@@ -16,8 +16,8 @@
   train 9 878, validation 2 117, test 2 117 (доля токсичных 33.3 % в каждом).
   Разбиение делается по уникальным ключам, поэтому одинаковый текст не попадает в два разбиения.
 
-Для повторного использования (в том числе в [`../rubert`](../../rubert)) в репозитории
-лежат:
+Разбиения общие для обеих моделей репозитория (classical и [`rubert`](../../rubert)) и лежат в
+корне, в `data/splits/`:
 
 - `data/splits/split_manifest.csv` — по строке на каждую из 14 412 записей: `source_row`,
   `text_sha256` (SHA-256 исходного текста в UTF-8), `group_sha256` (SHA-256 ключа дедупликации),
@@ -25,7 +25,7 @@
 - `data/splits/data_fingerprint.json` — источник, коммит, SHA-256 файла, отпечаток содержимого,
   параметры разбиения, размеры разбиений и SHA-256 манифеста.
 
-Загрузка разбиений с проверкой хешей: `toxic_clf.splits.load_splits()`.
+Загрузка разбиений с проверкой хешей: `toxic_core.splits.load_splits()` (до объединения с rubert — `toxic_clf.splits`); построение манифеста — `toxic prepare --rebuild-splits`.
 
 ## Эксперименты
 
@@ -223,15 +223,17 @@ ROC-AUC и AP посчитаны по decision scores, а не по вероят
   (`content_fingerprint` `5cce7860…289b0f`, SHA-256 исходного файла `c2c92931…2de0de`).
 - Метрики test: `reports/final_metrics.json`. Попримерные предсказания на test
   (`source_row`, метка, score, предсказание) для парного сравнения (например, тест Макнемара):
-  `reports/test_predictions.csv`.
+  `reports/test_predictions.csv`. Те же метрики и предсказания в общем для обеих моделей формате —
+  `../reports/eval/classical_test.json` (`toxic evaluate classical --split test`).
 
 ## Команды этапов
 
 ```bash
-python scripts/download_data.py   # загрузка, проверка SHA-256 и отпечатка
-python scripts/check_data.py      # отчёт reports/data_check.json
+# из корня репозитория; загрузка, проверка данных и манифест разбиений теперь общие (toxic_core)
+toxic prepare                     # загрузка, SHA-256 и отпечаток, отчёты ../reports/data/{data,split}_check.json
+toxic prepare --rebuild-splits    # манифест разбиений и отпечаток данных (совпадающие файлы не трогает)
+cd classical
 python scripts/analyze_texts.py   # длины и дубликаты: reports/text_analysis.json
-python scripts/make_splits.py     # манифест разбиений и отпечаток данных
 python scripts/run_baselines.py   # этап 3: Dummy и word TF-IDF + LogReg
 python scripts/compare_word_models.py  # этап 4: LinearSVC, словные n-граммы
 python scripts/compare_char_models.py  # этап 5: char TF-IDF, class_weight

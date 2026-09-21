@@ -7,7 +7,7 @@ import json
 import pandas as pd
 
 from toxic_clf import data
-from toxic_clf.cli import use_utf8_stdio
+from toxic_core.stdio import use_utf8_stdio
 
 REPORTS = data.PROJECT_ROOT / "reports"
 
@@ -39,9 +39,11 @@ def main() -> None:
                      "precision_toxic": m["precision_toxic"], "recall_toxic": m["recall_toxic"],
                      "average_precision": m.get("average_precision"), "n_features": None})
 
-    table = pd.DataFrame(rows)
+    environment = final["environment"]
+    table = pd.DataFrame(rows).assign(python=environment["python"], sklearn=environment["sklearn"])
     table.to_csv(REPORTS / "experiments_summary.csv", index=False, lineterminator="\n")
-    md = ["| этап | конфигурация | оценка на | F1 toxic | ± std | macro-F1 | precision | recall | AP |", "|---|---|---|---|---|---|---|---|---|"]
+    md = [f"Окружение: Python {environment['python']}, scikit-learn {environment['sklearn']}, "
+          f"NumPy {environment['numpy']}, SciPy {environment['scipy']}, pandas {environment['pandas']}." , "", "| этап | конфигурация | оценка на | F1 toxic | ± std | macro-F1 | precision | recall | AP |", "|---|---|---|---|---|---|---|---|---|"]
     fmt = lambda v: "" if v is None or pd.isna(v) else f"{v:.4f}"
     for r in table.itertuples():
         md.append(f"| {r.stage} | {r.name} | {r.evaluated_on} | {fmt(r.f1_toxic)} | {fmt(r.f1_toxic_std)} | {fmt(r.macro_f1)} | "

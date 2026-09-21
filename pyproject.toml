@@ -30,6 +30,9 @@ rubert = [
 ]
 dev = ["pytest>=9"]
 
+[project.scripts]
+toxic = "toxic_core.cli:main"
+
 # Три пакета из трёх каталогов: общее ядро и по пакету на модель. Пути к данным, моделям и отчётам
 # считаются от расположения исходников, поэтому установка — только editable (pip install -e .).
 [tool.setuptools]

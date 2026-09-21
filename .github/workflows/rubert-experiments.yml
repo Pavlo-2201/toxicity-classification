@@ -23,8 +23,11 @@ jobs:
       ONLY: ${{ inputs.only }}
     steps:
       - uses: actions/checkout@v6
-      - run: python -m pip install -r requirements.txt peft==0.17.1 && python -m pip install --no-deps -e .
-      - run: python scripts/download_data.py && python scripts/download_model.py --all
+      - name: Check Python version
+        run: python -c "import sys; assert sys.version_info[:3] == (3, 13, 12), sys.version"
+      - run: python -m pip install -r requirements/rubert.txt && python -m pip install --no-deps -e .
+        working-directory: .
+      - run: toxic prepare rubert --all-models
       - run: python scripts/experiments.py --out "$RUN_DIR" ${ONLY:+--only $ONLY}
       - run: python scripts/check_experiment_run.py "$RUN_DIR" --trained-in-last-session
       - run: python scripts/summarize_experiments.py --run-dir "$RUN_DIR"

@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import numpy as np
-from sklearn.metrics import precision_recall_curve
 from sklearn.model_selection import StratifiedKFold, cross_val_predict, cross_validate
 
-from toxic_clf.metrics import classification_metrics
 from toxic_clf.models import SEED, build_pipeline
+from toxic_core.metrics import best_f1_threshold, classification_metrics
 
 N_FOLDS = 5
 
@@ -53,11 +52,3 @@ def choose_threshold(config: dict, oof_scores, y_train, val_scores, y_val) -> di
     return {"default": default, "oof_tuned": round(tuned, 6), "oof_f1_toxic": round(oof_f1, 4),
             "used": round(used, 6), "rule": THRESHOLD_RULE}
 
-
-def best_f1_threshold(labels, scores) -> tuple[float, float]:
-    """Порог, максимизирующий F1 токсичного класса. Возвращает (порог, F1)."""
-    precision, recall, thresholds = precision_recall_curve(labels, scores)
-    precision, recall = precision[:-1], recall[:-1]
-    f1 = np.divide(2 * precision * recall, precision + recall, out=np.zeros_like(precision), where=(precision + recall) > 0)
-    best = int(np.argmax(f1))
-    return float(thresholds[best]), float(f1[best])

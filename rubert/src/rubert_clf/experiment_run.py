@@ -28,12 +28,14 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from rubert_clf import data, model_source, splits
+from rubert_clf import data, model_source
+from toxic_core import splits
 
 MANIFEST = "manifest.json"
 RUNS = "runs"
 DEFAULT_ROOT = data.PROJECT_ROOT / "experiments" / "runs"
 PACKAGE_DIR = Path(__file__).resolve().parent
+CORE_DIR = Path(splits.__file__).resolve().parent  # общие данные, разбиения и метрики тоже влияют на прогон
 EXPERIMENT_SCRIPT = data.PROJECT_ROOT / "scripts" / "experiments.py"
 
 
@@ -82,9 +84,9 @@ def plan(protocol: dict, only: list[str] | None = None, skip_ready: bool = False
 
 
 def code_sha256() -> str:
-    """Хеш исходников пакета и скрипта экспериментов: продолжать можно только тот же код."""
+    """Хеш исходников пакета, общего ядра и скрипта экспериментов: продолжать можно только тот же код."""
     digest = hashlib.sha256()
-    for path in sorted(PACKAGE_DIR.glob("*.py")) + [EXPERIMENT_SCRIPT]:
+    for path in sorted(PACKAGE_DIR.glob("*.py")) + sorted(CORE_DIR.glob("*.py")) + [EXPERIMENT_SCRIPT]:
         digest.update(path.name.encode() + b"\0" + path.read_bytes() + b"\0")
     return digest.hexdigest()
 

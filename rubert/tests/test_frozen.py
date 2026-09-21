@@ -1,10 +1,11 @@
 import numpy as np
 import torch
 
-from rubert_clf import data, splits
+from rubert_clf import data
 from rubert_clf.dataset import ToxicCommentsDataset
 from rubert_clf.embeddings import extract_embeddings, pool
 from rubert_clf.tfidf_baseline import build_classical_baseline, load_classical_selection
+from toxic_core import splits
 
 TEXTS = ["Ты дурак!", "Очень длинный и вежливый комментарий про погоду и выходные, спасибо всем.", "ок", "Иди отсюда"]
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 import random
 import re
 
-from toxic_clf.text import normalize_text
+from toxic_core.text import normalize_text
 
 # Латинские буквы, которые выглядят как кириллические (в нижнем и верхнем регистре)
 LATIN_TO_CYRILLIC = str.maketrans("aceopxykmtbhACEOPXYKMTBH", "асеорхукмтвнАСЕОРХУКМТВН")

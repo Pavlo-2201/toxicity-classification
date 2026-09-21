@@ -1,9 +1,9 @@
 """Сводка экспериментов: среднее и разброс по seed, выбор по правилу протокола, сравнение с TF-IDF.
 
 Читает <каталог>/runs/*.json, пишет в тот же каталог summary.json, summary.md и анализ ошибок
-итоговой конфигурации на test (error_groups_test.json, без текстов). Каталог по умолчанию —
-опубликованные результаты experiments/runs; для нового запуска — --run-dir experiments/runs/<id>: такой
-каталог сначала проверяется (scripts/check_experiment_run.py), неполный запуск не сводится.
+итоговой конфигурации на test (error_groups_test.json, без текстов). Каталог запуска задаётся
+явно: --run-dir experiments/runs/<id>. При наличии манифеста сначала проверяется полнота запуска
+(scripts/check_experiment_run.py); неполный запуск не сводится.
 """
 
 from __future__ import annotations
@@ -17,17 +17,17 @@ import numpy as np
 import pandas as pd
 from sklearn.metrics import average_precision_score
 
-from rubert_clf import data, experiment_run as er, splits
-from rubert_clf.cli import use_utf8_stdio
+from rubert_clf import data, experiment_run as er
 from rubert_clf.errors import categorize, oov_share, rates_by_group, train_vocabulary
 from rubert_clf.finetune import write_json
-from rubert_clf.metrics import classification_metrics, mcnemar, paired_bootstrap_f1_diff
 from rubert_clf.protocol import long_mask
+from toxic_core import splits
+from toxic_core.metrics import classification_metrics, mcnemar, paired_bootstrap_f1_diff
+from toxic_core.stdio import use_utf8_stdio
 
 ROOT = data.PROJECT_ROOT
-PUBLISHED = ROOT / "experiments" / "runs"
 PROTOCOL = ROOT / "configs" / "protocol.json"
-CLASSICAL = ROOT / "reference" / "classical" / "test_predictions.csv"
+CLASSICAL = data.REPO_ROOT / "classical" / "reports" / "test_predictions.csv"
 
 
 def stat(values) -> dict:
@@ -87,9 +87,11 @@ def select(summary: dict) -> dict:
 def main() -> None:
     use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--run-dir", type=Path, default=PUBLISHED, help="каталог с runs/ (по умолчанию experiments/runs)")
+    parser.add_argument("--run-dir", type=Path, required=True, help="каталог локального запуска с runs/")
     args = parser.parse_args()
     out = args.run_dir
+    if not (out / er.RUNS).is_dir():
+        parser.error(f"{out}: нет каталога runs/ с результатами экспериментов")
     protocol_path = PROTOCOL
     if (out / er.MANIFEST).exists():  # каталог experiments.py: только полный согласованный запуск
         problems = er.verify(out)

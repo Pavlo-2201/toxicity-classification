@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 
@@ -21,6 +22,9 @@ def _trained_dir(tokenizer, tmp_path):
     history = fit(build_model(model_source.MODEL_DIR), ds, ds, tokenizer,
                   FinetuneConfig(epochs=2, batch_size=3, lr=1e-4, max_length=16), torch.device("cpu"),
                   checkpoint_dir=tmp_path, log=lambda *_: None)
+    # last.pt (веса + оптимизатор, ~350 МБ) нужен только для продолжения обучения; каталоги тестов pytest
+    # удаляет лишь в конце сессии, и без этого файлы копятся до сотен мегабайт на тест
+    (tmp_path / "last.pt").unlink()
     return tmp_path / "best", history
 
 
@@ -53,6 +57,7 @@ def test_train_cli_smoke(dataset, tokenizer, tmp_path):
     subprocess.run([sys.executable, str(data.PROJECT_ROOT / "train.py"), "--smoke", "--device", "cpu",
                     "--output-dir", str(tmp_path / "model"), "--checkpoint-dir", str(tmp_path / "ckpt")],
                    capture_output=True, text=True, encoding="utf-8", errors="replace", check=True)
+    shutil.rmtree(tmp_path / "ckpt")  # чекпойнты продолжения обучения тесту не нужны
     meta = json.loads((tmp_path / "model" / "train_metadata.json").read_text(encoding="utf-8"))
     assert meta["mode"] == "smoke" and meta["n_train"] == 256
     assert ToxicityClassifier.load(tmp_path / "model", "cpu").predict(["Ты дурак!"]).shape == (1,)

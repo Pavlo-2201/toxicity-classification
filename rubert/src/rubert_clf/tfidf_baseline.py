@@ -11,9 +11,9 @@ from sklearn.preprocessing import FunctionTransformer
 from sklearn.svm import LinearSVC
 
 from rubert_clf import data
-from rubert_clf.text import normalize_texts
+from toxic_core.text import normalize_texts
 
-CLASSICAL_DIR = data.PROJECT_ROOT / "reference" / "classical"
+CLASSICAL_DIR = data.REPO_ROOT / "classical" / "reports"  # отчёты классической части этого репозитория
 BEST_MODEL_PATH = CLASSICAL_DIR / "best_model.json"
 SEED = 42
 

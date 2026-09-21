@@ -5,6 +5,9 @@
 калибровочной части. configs/final_lora.json — так же для LoRA-кандидата: сохраняется только
 адаптер (models/rubert-toxic-lora), базовая модель берётся из реестра. --smoke и --config с
 FinetuneConfig — короткое обучение rubert-tiny2 для smoke-проверок и пользовательских конфигураций.
+
+Готовые артефакт и отчёт прогона не перезаписываются без --overwrite: повторный прогон на GPU
+не воспроизводится побитно, и замена опубликованных весов и отчёта должна быть осознанной.
 """
 
 from __future__ import annotations
@@ -20,12 +23,14 @@ import torch
 import transformers
 from transformers import AutoTokenizer
 
-from rubert_clf import data, model_source, splits
+from rubert_clf import data, model_source
 from rubert_clf.dataset import ToxicCommentsDataset
 from rubert_clf.finetune import FinetuneConfig, build_model, fit, write_json
 from rubert_clf.inference import is_peft_model
 from rubert_clf.runtime import get_device, set_seed
-from rubert_clf.cli import use_utf8_stdio
+from toxic_core import splits
+from toxic_core.results import OutputExistsError, ensure_absent
+from toxic_core.stdio import use_utf8_stdio
 
 DEFAULT_CONFIG = data.PROJECT_ROOT / "configs" / "finetune_best.json"
 FINAL_CONFIG = data.PROJECT_ROOT / "configs" / "final_base.json"
@@ -79,8 +84,8 @@ def train_final(raw: dict, config_path: Path, args) -> None:
     """Итоговая модель по протоколу — выбранный checkpoint экспериментального прогона.
 
     Кандидат и seed берутся из протокола без изменений (те же эпохи и расписание lr), эпоха — по AP
-    на validation, сохраняются веса именно этой эпохи. Отчёт прогона пишется туда же, куда его пишет
-    scripts/experiments.py, с хешем сохранённых весов: checkpoint, порог и метрики — из одного прогона.
+    на validation, сохраняются веса именно этой эпохи. Отчёт финального прогона хранится отдельно
+    в reports/final_runs: checkpoint, порог и метрики относятся к одному обучению.
     """
     from rubert_clf.protocol import RunSpec, calibration_split, long_mask, run
 
@@ -89,6 +94,9 @@ def train_final(raw: dict, config_path: Path, args) -> None:
     candidate = next((c for c in protocol["candidates"] if c["name"] == raw["candidate"]), None)
     if candidate is None or raw["seed"] not in protocol["seeds"]:
         raise SystemExit(f"В {protocol_path.name} нет кандидата {raw['candidate']!r} или seed {raw['seed']}")
+    output_dir = args.output_dir or data.PROJECT_ROOT / raw.get("output_dir", "models/rubert-toxic")
+    run_report = args.run_report or data.PROJECT_ROOT / "reports" / "final_runs" / f"{candidate['name']}__s{raw['seed']}.json"
+    guard_outputs([output_dir, run_report], args.overwrite, "--output-dir и --run-report")
     device = get_device(args.device)
     parts = splits.load_splits()
     fit_df, calib_df = calibration_split(parts["train"])
@@ -101,8 +109,6 @@ def train_final(raw: dict, config_path: Path, args) -> None:
     start = time.perf_counter()
     result = run(spec, sets, device, masks)
     result["wall_seconds"] = round(time.perf_counter() - start, 1)
-    output_dir = args.output_dir or data.PROJECT_ROOT / raw.get("output_dir", "models/rubert-toxic")
-    run_report = args.run_report or data.PROJECT_ROOT / "reports" / "final_runs" / f"{candidate['name']}__s{raw['seed']}.json"
     selection = export_final(result, candidate, raw["seed"], protocol_path, output_dir, run_report)
     write_json(output_dir / "train_metadata.json", {
         "mode": "final", "config_file": config_path.name, "base_model": selection["base_model"],
@@ -119,6 +125,13 @@ def train_final(raw: dict, config_path: Path, args) -> None:
     print(f"Модель сохранена в {output_dir}; отчёт прогона — {run_report}")
 
 
+def guard_outputs(paths, overwrite: bool, hint: str) -> None:
+    try:
+        ensure_absent(paths, overwrite, hint)
+    except OutputExistsError as error:
+        raise SystemExit(str(error)) from error
+
+
 def main() -> None:
     use_utf8_stdio()
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -126,12 +139,13 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true", help=f"малая выборка и 1 эпоха ({SMOKE_CONFIG.name})")
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument("--run-report", type=Path, default=None,
-                        help="отчёт прогона итоговой модели; по умолчанию experiments/runs/runs/<кандидат>__s<seed>.json")
+                        help="отчёт прогона итоговой модели; по умолчанию reports/final_runs/<кандидат>__s<seed>.json")
     parser.add_argument("--base-model-dir", type=Path, default=model_source.MODEL_DIR,
                         help="предобученный энкодер; файлы моделей из реестра сверяются с ревизией")
     parser.add_argument("--checkpoint-dir", type=Path, default=None, help="по умолчанию checkpoints/<имя папки модели>")
     parser.add_argument("--device", default="auto")
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--overwrite", action="store_true", help="заменить существующие артефакт и отчёт прогона")
     args = parser.parse_args()
 
     config_path = args.config or (SMOKE_CONFIG if args.smoke else FINAL_CONFIG)
@@ -142,6 +156,7 @@ def main() -> None:
     config = FinetuneConfig.from_dict(raw)
     output_dir = args.output_dir or data.PROJECT_ROOT / "models" / ("smoke" if args.smoke else "rubert-toxic")
     checkpoint_dir = args.checkpoint_dir or data.PROJECT_ROOT / "checkpoints" / output_dir.name
+    guard_outputs([output_dir], args.overwrite, "--output-dir")
 
     base_dir = args.base_model_dir
     try:  # модель из реестра сверяется с ревизией; своя папка не проверяется
