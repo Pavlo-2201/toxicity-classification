@@ -1,4 +1,4 @@
-# russian-text-classification
+# russian-toxicity-classification
 
 Бинарная классификация токсичных русскоязычных комментариев (2ch.hk, pikabu.ru) и воспроизводимое
 сравнение классической модели (TF-IDF + LinearSVC) с дообученным RuBERT. У обеих моделей одни данные,
@@ -11,22 +11,22 @@
 | модель | порог выбран | F1 toxic | precision | recall | AP | ROC-AUC |
 |---|---|---|---|---|---|---|
 | TF-IDF char 2–5 + LinearSVC | по OOF-оценкам train | 0.854 [0.834; 0.873] | 0.833 | 0.877 | 0.927 | 0.961 |
-| **ruBert-base, L=128** (seed 42, эпоха 2) | на калибровочной части train | **0.891** [0.872; 0.907] | 0.892 | 0.889 | 0.954 | 0.976 |
+| **ruBert-base, L=128** (seed 42, эпоха 2) | на калибровочной части train | **0.891** [0.874; 0.907] | 0.893 | 0.888 | 0.954 | 0.976 |
 
 - В квадратных скобках — 95 % бутстреп-интервал (1000 повторов, seed 42).
-- Разность F1 (RuBERT − TF-IDF): +0.036 [+0.018; +0.057], парный бутстреп. Тест Макнемара:
+- Разность F1 (RuBERT − TF-IDF): +0.036 [+0.017; +0.057], парный бутстреп. Тест Макнемара:
   132 текста верно классифицирует только RuBERT, 75 — только TF-IDF, p = 0.0001
   (`reports/eval/compare-classical-vs-rubert_test.json`).
 - Устойчивость результата к seed (протокол, 3 seed на конфигурацию):
 
 | конфигурация | test F1 | test AP | CPU, мс/текст | обучаемых параметров |
 |---|---|---|---|---|
-| rubert-tiny2, L=256 | 0.886 ± 0.006 | 0.947 ± 0.003 | 2.8 | 29.2 M |
-| ruBert-base + LoRA, L=128 | 0.885 ± 0.013 | 0.953 ± 0.001 | 45.2 | 0.6 M |
-| ruBert-base, L=128 | 0.892 ± 0.003 | 0.954 ± 0.002 | 56.2 | 178.3 M |
+| rubert-tiny2, L=256 | 0.886 ± 0.006 | 0.947 ± 0.003 | 2.31 | 29.2 M |
+| ruBert-base + LoRA, L=128 | 0.885 ± 0.013 | 0.953 ± 0.001 | 48.84 | 0.6 M |
+| ruBert-base, L=128 | 0.891 ± 0.002 | 0.954 ± 0.002 | 33.43 | 178.3 M |
 
 ruBert-base лучше TF-IDF на 0.038 F1 в среднем по трём seed, тест Макнемара p ≤ 0.0002 при каждом
-seed. На CPU он примерно в 20 раз дороже rubert-tiny2 с L=256, а по качеству разница невелика.
+seed. На CPU он примерно в 14 раз дороже rubert-tiny2 с L=256, а по качеству разница невелика.
 
 ### Протоколы выбора
 
@@ -74,7 +74,7 @@ CV, OOF-порог, калибровка, варианты нормализац�
 
 ## Установка
 
-Из корня репозитория, Python 3.11+ (проверено на 3.13.12). Пути к данным, моделям и отчётам считаются
+Из корня репозитория, Python 3.11+; проверенное окружение и CI — Python 3.13.12. Пути к данным, моделям и отчётам считаются
 от исходников, поэтому пакет ставится только в editable-режиме.
 
 ```bash
@@ -89,7 +89,8 @@ pip install "torch==2.8.0" --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements/rubert.txt && pip install --no-deps -e .
 ```
 
-`requirements/*.txt` закрепляют версии, на которых получены отчёты. Без закрепления можно поставить
+`requirements/*.txt` закрепляют версии для воспроизведения.
+Без закрепления можно поставить
 `pip install -e .` или `pip install -e ".[rubert]"`. Без зависимостей RuBERT команды для `rubert`
 сообщают, что нужно доустановить, а его тесты не собираются.
 
@@ -114,13 +115,13 @@ pytest
 Формат оценки одинаков у обеих моделей. `<имя>_<разбиение>_predictions.csv` содержит `source_row`,
 `toxic`, `score`, `probability` и `pred` (`pred = score ≥ threshold`). В `<имя>_<разбиение>.json` —
 артефакт, SHA-256 манифеста, порог и протокол его выбора, метрики, бутстреп-интервал и SHA-256 файла
-предсказаний. Перед оценкой проверяется, что артефакт обучен на манифесте проекта. `compare`
+предсказаний. Поле `environment` содержит версии Python и библиотек фактического расчёта.
+Перед оценкой проверяется, что артефакт обучен на манифесте проекта. `compare`
 отказывается сравнивать оценки на разных текстах, метках или данных.
 
 Готовые результаты не перезаписываются случайно. `train` останавливается до начала обучения, если
 артефакт или отчёты уже есть. `evaluate`, `compare` и `prepare` оставляют совпадающий по байтам файл
-как есть, а отличающийся заменяют только с `--overwrite`. Скрипты частей (`classical/scripts/`,
-`rubert/scripts/`) работают как прежде и описаны в README частей.
+как есть, а отличающийся заменяют только с `--overwrite`. Дополнительные эксперименты описаны ниже и в документации моделей.
 
 ## Данные
 
@@ -149,3 +150,28 @@ Russian Language Toxic Comments (Kaggle `blackmoon/russian-language-toxic-commen
 
 Тяжёлые эксперименты запускаются в ручном workflow
 [`rubert-experiments`](.github/workflows/rubert-experiments.yml) на GPU.
+
+## Эксперименты и документация
+
+Команды запускаются из корня репозитория. Для варианта с нормализацией используются свой
+артефакт и собственные порог и калибровка:
+
+```bash
+toxic train classical --normalization all
+toxic predict classical --artifact classical/models/toxic_clf_all.joblib --text "ты тупoй идиoт"
+python classical/scripts/external_eval.py --model classical/models/toxic_clf_all.joblib
+```
+
+Скрипты экспериментов рассчитаны на запуск из соответствующего каталога:
+
+```bash
+cd classical
+python scripts/robustness_eval.py --evaluate-test
+python scripts/external_eval.py
+python scripts/error_analysis.py
+python scripts/human_audit.py form
+python scripts/human_audit.py compare
+cd ../rubert
+python scripts/experiments.py --out experiments/runs/my-run
+python scripts/summarize_experiments.py --run-dir experiments/runs/my-run
+```

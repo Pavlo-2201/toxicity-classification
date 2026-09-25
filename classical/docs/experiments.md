@@ -25,7 +25,7 @@
 - `data/splits/data_fingerprint.json` — источник, коммит, SHA-256 файла, отпечаток содержимого,
   параметры разбиения, размеры разбиений и SHA-256 манифеста.
 
-Загрузка разбиений с проверкой хешей: `toxic_core.splits.load_splits()` (до объединения с rubert — `toxic_clf.splits`); построение манифеста — `toxic prepare --rebuild-splits`.
+Загрузка разбиений с проверкой хешей: `toxic_core.splits.load_splits()`; построение манифеста — `toxic prepare --rebuild-splits`.
 
 ## Эксперименты
 
